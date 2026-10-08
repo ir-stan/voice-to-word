@@ -30,14 +30,6 @@
   .chip{background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;border-radius:999px;padding:1px 4px 1px 9px;font-size:.75rem;display:inline-flex;align-items:center;gap:2px}
   .chip button{border:0;background:none;color:#64748b;cursor:pointer;font-size:.85rem;padding:0 3px}
   #rterm{margin-top:6px;width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:5px 8px;font:inherit;font-size:.8rem}
-  #tx .hint{background:#e0f2fe;color:#075985}
-  .opts{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;padding:16px 22px}
-  .seg{display:inline-flex;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden}
-  .seg label{cursor:pointer} .seg input{display:none} .seg span{display:block;padding:8px 16px;font-size:.9rem;font-weight:600;color:#334155}
-  .seg input:checked+span{background:#0d9488;color:#fff}
-  .chk{font-size:.88rem;display:flex;gap:6px;align-items:center;cursor:pointer}
-  .opts #mNote{flex-basis:100%}
-  .offl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex-basis:100%}
   #tx mark.fx{background:#dcfce7;color:#14532d;border-radius:3px;padding:0 1px}
   #tx .tag.ai{border:0;cursor:pointer;background:#ede9fe;color:#5b21b6;font-family:inherit}
   .name.err{color:#b91c1c} .clr{background:none;border:0;color:#64748b;cursor:pointer;font-size:.8rem;text-decoration:underline;margin-left:6px}
@@ -45,7 +37,6 @@
   .btn:disabled{opacity:.35;cursor:not-allowed}
   .dark{background:#0f172a;color:#fff} .dark:hover:not(:disabled){background:#334155}
   .teal{background:#0d9488;color:#fff} .teal:hover:not(:disabled){background:#14b8a6}
-  .soft{background:#f1f5f9;color:#334155;display:inline-flex;align-items:center;gap:6px;margin-top:14px;align-self:flex-start} .soft:hover{background:#e2e8f0}
   .prog{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
   .ring{position:relative;width:210px;height:210px}
   .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
@@ -89,12 +80,6 @@
       <input id="rterm" class="hidden" placeholder="自行新增詞彙（Enter）" autocomplete="off">
     </div>
   </section>
-  <section class="card opts">
-    <div class="seg"><label><input type="radio" name="mode" id="mFast" checked><span>⚡ 高速模式</span></label><label><input type="radio" name="mode" id="mPrecise"><span>🎯 精準模式</span></label></div>
-    <label class="chk"><input type="checkbox" id="mLLM" checked> AI 整句校正（依會議資料理解語意，需額外下載語言模型）</label>
-    <div id="mNote" class="muted"></div>
-    <div class="offl"><button id="bOffline" class="btn soft" style="margin:0">準備離線使用</button><span id="offState" class="muted"></span></div>
-  </section>
   <section class="card prog">
     <div class="ring">
       <svg viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs>
@@ -136,7 +121,6 @@ const ZH = (() => {
   const read = new Map();
   for (const seg of PY.split('|')) { const i = seg.indexOf(':'), s = seg.slice(0, i); for (const ch of seg.slice(i + 1)) { let a = read.get(ch); if (!a) read.set(ch, a = []); a.push(s); } }
   const st = new Map(); for (let i = 0; i + 1 < S2T.length; i += 2) st.set(S2T[i], S2T[i + 1]);
-  // 台灣常見口音混淆：zh/z、ch/c、sh/s、n/l、f/h、r/l，前後鼻音 an/ang、en/eng、in/ing
   function norm(s) {
     s = s.replace(/^zh/, 'z').replace(/^ch/, 'c').replace(/^sh/, 's').replace(/^n(?=[aeiouv])/, 'l').replace(/^r/, 'l').replace(/^f/, 'h').replace(/^hu(?=[aeion])/, 'h');
     s = s.replace(/ng$/, 'n').replace(/^([^aeiouv]*)ue$/, '$1ve').replace(/^([jqxy])u/, '$1v');
@@ -147,8 +131,7 @@ const ZH = (() => {
   function same(a, b) { if (a === b) return true; const x = read.get(a) || read.get(st.get(a)), y = read.get(b) || read.get(st.get(b)); if (!x || !y) return false; return x.some(p => y.includes(p)); }
   function near(a, b) { if (same(a, b)) return true; const x = nr(a), y = nr(b); return x.length > 0 && x.some(p => y.includes(p)); }
   function s2t(t) { let o = ''; for (const ch of t) o += st.get(ch) || ch; return o; }
-  const isSimp = t => { let n = 0; for (const ch of t) if (st.has(ch)) n++; return n; };
-  return { same, near, s2t, isSimp, has: ch => read.has(ch) || st.has(ch) };
+  return { same, near, s2t };
 })();
 /* ===== PDFX：內建 PDF 文字擷取（不需下載任何元件；支援 FlateDecode、物件串流、ToUnicode/CID 字型、表單 XObject） ===== */
 const PDFX = (() => {
@@ -158,7 +141,6 @@ const PDFX = (() => {
   class Ref { constructor(n, g) { this.n = n; this.g = g; } }
   class Name { constructor(s) { this.s = s; } }
   class Op { constructor(s) { this.s = s; } }
-  /* ---------- 詞法分析 ---------- */
   class Lexer {
     constructor(b, p = 0, end = b.length) { this.b = b; this.p = p; this.end = end; }
     skip() { const b = this.b; for (;;) { while (this.p < this.end && WS[b[this.p]]) this.p++; if (this.p < this.end && b[this.p] === 37) { while (this.p < this.end && b[this.p] !== 10 && b[this.p] !== 13) this.p++; continue; } break; } }
@@ -200,11 +182,10 @@ const PDFX = (() => {
       return { str: out };
     }
   }
-  /* ---------- 物件解析 ---------- */
   function parseObj(lx, t) {
     if (t === undefined) t = lx.tok();
     if (t === '<<') { const d = {}; for (;;) { const k = lx.tok(); if (k === '>>' || k === null) break; if (!(k instanceof Name)) continue; d[k.s] = parseObj(lx); } return d; }
-    if (t === '[') { const a = []; for (;;) { const save = lx.p; const x = lx.tok(); if (x === ']' || x === null) break; if (typeof x === 'number') { const s2 = lx.p, g = lx.tok(); if (typeof g === 'number') { const s3 = lx.p, r = lx.tok(); if (r instanceof Op && r.s === 'R') { a.push(new Ref(x, g)); continue; } lx.p = s3; } lx.p = s2; } a.push(parseObj(lx, x)); } return a; }
+    if (t === '[') { const a = []; for (;;) { const x = lx.tok(); if (x === ']' || x === null) break; if (typeof x === 'number') { const s2 = lx.p, g = lx.tok(); if (typeof g === 'number') { const s3 = lx.p, r = lx.tok(); if (r instanceof Op && r.s === 'R') { a.push(new Ref(x, g)); continue; } lx.p = s3; } lx.p = s2; } a.push(parseObj(lx, x)); } return a; }
     if (typeof t === 'number') { const s = lx.p, g = lx.tok(); if (typeof g === 'number') { const s2 = lx.p, r = lx.tok(); if (r instanceof Op && r.s === 'R') return new Ref(t, g); lx.p = s2; } lx.p = s; return t; }
     return t;
   }
@@ -213,7 +194,7 @@ const PDFX = (() => {
     w.write(u8).catch(() => { }); w.close().catch(() => { });
     const r = ds.readable.getReader();
     try { for (;;) { const { done, value } = await r.read(); if (done) break; chunks.push(value); len += value.length; } }
-    catch (e) { if (!len) throw e; } // 損毀的串流：保留已解出的部分
+    catch (e) { if (!len) throw e; }
     const out = new Uint8Array(len); let o = 0; for (const c of chunks) { out.set(c, o); o += c.length; } return out;
   }
   function unpredict(d, parms) {
@@ -242,7 +223,7 @@ const PDFX = (() => {
       if (n === 'FlateDecode' || n === 'Fl') { try { data = await inflate(data); } catch (e) { data = await inflate(data.subarray(2), true); } data = unpredict(data, ps[i]); }
       else if (n === 'ASCIIHexDecode' || n === 'AHx') { data = new Lexer(new Uint8Array([60, ...data, 62])).hex().str; }
       else if (n === 'ASCII85Decode' || n === 'A85') data = a85(data);
-      else return null; // 影像等其他編碼：不需要文字
+      else return null;
     }
     return data;
   }
@@ -252,7 +233,6 @@ const PDFX = (() => {
     if (g.length) { const n = g.length; while (g.length < 5) g.push(84); let v = 0; for (const x of g) v = v * 85 + x; const b = [v >>> 24 & 255, v >>> 16 & 255, v >>> 8 & 255, v & 255]; out.push(...b.slice(0, n - 1)); }
     return new Uint8Array(out);
   }
-  /* ---------- 文件 ---------- */
   class Doc {
     constructor(b) { this.b = b; this.objs = new Map(); this.cache = new Map(); }
     res(x) { let k = 0; while (x instanceof Ref && k++ < 20) x = this.get(x.n); return x; }
@@ -262,7 +242,7 @@ const PDFX = (() => {
       let v = null;
       if (e.inStm) v = e.val;
       else {
-        const lx = new Lexer(this.b, e.off); lx.tok(); lx.tok(); lx.tok(); // N G obj
+        const lx = new Lexer(this.b, e.off); lx.tok(); lx.tok(); lx.tok();
         v = parseObj(lx);
         const save = lx.p; const t = lx.tok();
         if (t instanceof Op && t.s === 'stream' && v && typeof v === 'object') {
@@ -282,11 +262,9 @@ const PDFX = (() => {
       const rx = /(\d+)\s+(\d+)\s+obj\b/g; let m;
       while ((m = rx.exec(s))) this.objs.set(+m[1], { off: m.index });
       if (/\/Encrypt\s/.test(s.slice(s.lastIndexOf('trailer') > 0 ? s.lastIndexOf('trailer') : Math.max(0, s.length - 4096))) || /\/Encrypt\s*\d+\s+\d+\s+R/.test(s)) {
-        // 有加密：若為空白使用者密碼也無法在此解密
         let enc = false; for (const [n] of this.objs) { const o = this.get(n); if (o && o.Filter && o.Filter.s === 'Standard' && (o.O || o.U)) { enc = true; break; } }
         if (enc) throw new Error('PDF 有加密保護，無法擷取文字');
       }
-      // 物件串流
       for (const [n] of [...this.objs]) {
         const o = this.get(n);
         if (o && o.stream && o.dict.Type && o.dict.Type.s === 'ObjStm') {
@@ -296,7 +274,6 @@ const PDFX = (() => {
           for (const [num, off] of hdr) { if (this.objs.has(num) && !this.objs.get(num).inStm) continue; const l2 = new Lexer(d, first + off); this.objs.set(num, { inStm: true, val: parseObj(l2) }); this.cache.delete(num); }
         }
       }
-      // 根目錄
       let root = null;
       const tr = s.lastIndexOf('trailer');
       if (tr >= 0) { const lx = new Lexer(b, tr + 7); const d = parseObj(lx); if (d && d.Root) root = this.res(d.Root); }
@@ -315,9 +292,7 @@ const PDFX = (() => {
   }
   const ENDSTREAM = new TextEncoder().encode('endstream');
   function indexOf(b, pat, from) { outer: for (let i = from; i <= b.length - pat.length; i++) { for (let j = 0; j < pat.length; j++) if (b[i + j] !== pat[j]) continue outer; return i; } return -1; }
-  /* ---------- 字型與 ToUnicode ---------- */
   const utf16be = new TextDecoder('utf-16be');
-  function hexBytes(s) { return s.str; }
   function cmapParse(text) {
     const map = new Map(); let csLens = new Set(); const lx = new Lexer(new TextEncoder().encode(text)); const st = [];
     const toCode = b => { let v = 0; for (const x of b) v = v * 256 + x; return v; };
@@ -370,10 +345,9 @@ const PDFX = (() => {
     }
     if (info.ucs2) return utf16be.decode(bytes);
     if (info.cjk) { try { return (tdCache[info.cjk] ||= new TextDecoder(info.cjk)).decode(bytes); } catch (e) { return ''; } }
-    if (info.two) return ''; // Identity-H 且無 ToUnicode：無法對應
+    if (info.two) return '';
     let s = ''; for (const b of bytes) s += info.enc[b]; return s;
   }
-  /* ---------- 內容串流 ---------- */
   async function runContent(doc, data, res, fcache, out, depth) {
     if (depth > 6) return;
     const fonts = doc.res(res.Font) || {}, xo = doc.res(res.XObject) || {};
@@ -400,7 +374,6 @@ const PDFX = (() => {
       else if (op === 'T*') { ty -= lead || lineH; }
       else if (op === 'Tj' || op === "'" || op === '"') { if (op !== 'Tj') ty -= lead || lineH; const s = st[st.length - 1]; if (font && s && s.str) emit(decodeStr(font, s.str), tx, ty); }
       else if (op === 'TJ') { const a = st[st.length - 1]; if (font && Array.isArray(a)) { let s = ''; for (const x of a) { if (x && x.str) s += decodeStr(font, x.str); else if (typeof x === 'number' && x < -250 && s && !/\s$/.test(s) && /[A-Za-z0-9]$/.test(s)) s += ' '; } emit(s, tx, ty); } }
-      else if (op === 'ET') { }
       else if (op === 'Do') {
         const nm = st[st.length - 1]; const x = nm instanceof Name ? doc.res(xo[nm.s]) : null;
         if (x && x.stream && x.dict.Subtype && x.dict.Subtype.s === 'Form') { const d = await decodeStream(doc, x); if (d) { nl(); await runContent(doc, d, doc.res(x.dict.Resources) || res, fcache, out, depth + 1); nl(); lastY = null; } }
@@ -415,7 +388,6 @@ const PDFX = (() => {
     for (const s of arr) if (s && s.stream) { const d = await decodeStream(doc, s); if (d) parts.push(d, new Uint8Array([10])); }
     let n = 0; for (const p of parts) n += p.length; const out = new Uint8Array(n); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out;
   }
-  /* 回傳 { pages: [文字...] } */
   async function extract(buf, maxPages = 2000, onPage) {
     const doc = new Doc(new Uint8Array(buf)); await doc.load();
     if (!doc.pages.length) throw new Error('找不到 PDF 頁面');
@@ -441,7 +413,6 @@ const RAG = (() => {
     return out;
   };
   let IDX = null;
-  /* parts: [{ src, label, text }] */
   function build(parts) {
     const chunks = [];
     for (const p of parts) {
@@ -456,7 +427,6 @@ const RAG = (() => {
     const avg = docs.reduce((a, d) => a + d.len, 0) / Math.max(1, docs.length);
     const inv = new Map(); docs.forEach((d, i) => { for (const t of d.tf.keys()) { let a = inv.get(t); if (!a) inv.set(t, a = []); a.push(i); } });
     IDX = { chunks, docs, df, avg, inv, N: docs.length, all: parts.map(p => p.text).join('\n') };
-    // 全文 n-gram 次數（判斷是否為資料中的「詞」）
     const cnt = new Map();
     for (const r of IDX.all.match(/[\u3400-\u9fff\uf900-\ufaff]{2,}/g) || []) for (let n = 2; n <= 8; n++) for (let i = 0; i + n <= r.length; i++) { const g = r.substr(i, n); cnt.set(g, (cnt.get(g) || 0) + 1); }
     IDX.ng = cnt;
@@ -473,10 +443,9 @@ const RAG = (() => {
     }
     return [...sc].sort((a, b) => b[1] - a[1]).slice(0, k).map(([i, s]) => Object.assign({ score: s }, IDX.chunks[i]));
   }
-  /* 依檢索到的資料段落校正「聽錯的字」：只替換讀音相同／相近（含台灣口音混淆）的字，且候選詞須為資料中的詞 */
   function correct(text, ctx, gloss) {
     if (!IDX && !(gloss && gloss.length)) return { text, fixes: [] };
-    const pool = new Map(); // len -> Set(candidates)
+    const pool = new Map();
     const addC = (g) => { if (g.length < 3 || g.length > 10 || ![...g].every(isCJK)) return; let s = pool.get(g.length); if (!s) pool.set(g.length, s = new Set()); s.add(g); };
     for (const c of ctx || []) for (const r of c.text.match(/[\u3400-\u9fff\uf900-\ufaff]{3,}/g) || []) for (let n = 3; n <= Math.min(8, r.length); n++) for (let i = 0; i + n <= r.length; i++) { const g = r.substr(i, n); if ((IDX && (IDX.ng.get(g) || 0) >= 2) || n >= 5) addC(g); }
     for (const g of gloss || []) addC(g);
@@ -500,10 +469,9 @@ const RAG = (() => {
     }
     return { text: chars.join(''), fixes };
   }
-  /* 語言模型輸出的防幻覺檢查：與原句相似、數字不可憑空出現、新字須來自原句或參考資料 */
   function bigr(s) { const a = []; const t = s.replace(/[\s\p{P}\p{S}]/gu, ''); for (let i = 0; i + 1 < t.length; i++) a.push(t.substr(i, 2)); if (t.length === 1) a.push(t); return a; }
   function dice(a, b) { const A = bigr(a), B = bigr(b); if (!A.length || !B.length) return A.length === B.length ? 1 : 0; const m = new Map(); for (const x of A) m.set(x, (m.get(x) || 0) + 1); let n = 0; for (const x of B) { const c = m.get(x); if (c) { n++; m.set(x, c - 1); } } return 2 * n / (A.length + B.length); }
-  function soundAlike(a, b) { // 逐字近音比對（長度相同時）
+  function soundAlike(a, b) {
     const x = [...a.replace(/[\s\p{P}\p{S}]/gu, '')], y = [...b.replace(/[\s\p{P}\p{S}]/gu, '')]; if (!x.length || x.length !== y.length) return 0;
     let n = 0; for (let i = 0; i < x.length; i++) if (x[i] === y[i] || ZH.near(x[i], y[i])) n++; return n / x.length;
   }
@@ -536,13 +504,11 @@ const CORE = (() => {
   const le16 = (b, p) => b[p] | (b[p + 1] << 8);
   const le32 = (b, p) => (b[p] | (b[p + 1] << 8) | (b[p + 2] << 16)) + b[p + 3] * 16777216;
   const le64 = (b, p) => le32(b, p) + le32(b, p + 4) * 4294967296;
-
   async function readBytes(file, start, end) {
     end = Math.min(end, file.size);
     if (end <= start) return new Uint8Array(0);
     return new Uint8Array(await file.slice(start, end).arrayBuffer());
   }
-  /* 有快取視窗的讀取器（回傳的 subarray 只在下一次讀取前有效；要保存請 slice） */
   class Reader {
     constructor(file, win = 8 << 20) { this.f = file; this.win = win; this.s = 0; this.b = new Uint8Array(0); }
     get size() { return this.f.size; }
@@ -552,8 +518,6 @@ const CORE = (() => {
       return this.b.subarray(0, Math.min(n, this.b.length));
     }
   }
-
-  /* ---------- 共用：AAC / MP3 ---------- */
   const SR_TABLE = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
   function parseASC(asc) {
     let bit = 0;
@@ -579,7 +543,6 @@ const CORE = (() => {
     4: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
   };
   const MP3_SR = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
-  /* MPEG 音訊（Layer I/II/III）或 ADTS 音框標頭 */
   function frameHeader(b, p) {
     if (p + 7 > b.length || b[p] !== 0xff || (b[p + 1] & 0xe0) !== 0xe0) return null;
     const b1 = b[p + 1], b2 = b[p + 2], layer = (b1 >> 1) & 3;
@@ -600,7 +563,6 @@ const CORE = (() => {
     return { type: 'mp3', len: Math.floor(144 * br / sr) + pad, samples: 1152, sr, ch, layer: L };
   }
   const isInfoFrame = (b, p, len) => { const s = td.decode(b.subarray(p + 4, p + Math.min(len, 60))); return /Xing|Info|VBRI/.test(s); };
-  /* 把任意切割的 MP3 位元流重新切成完整音框 */
   class MP3Framer {
     constructor() { this.buf = new Uint8Array(0); this.t = 0; this.sr = 0; }
     push(bytes, t) {
@@ -621,8 +583,6 @@ const CORE = (() => {
       return out;
     }
   }
-
-  /* ---------- MP4 / MOV / M4A ---------- */
   function* children(b, start, end) {
     let p = start;
     while (p + 8 <= end) {
@@ -689,7 +649,6 @@ const CORE = (() => {
         track = { codec: 'pcm', sr, ch: ch || 1, bits, flt, le, sgn, bpf: (ch || 1) * bits / 8 };
       } else throw new Error('不支援的音訊編碼 ' + fmt);
       this.track = track; this.ts = ts;
-      // 樣本表
       const stsz = child(b, stbl, 'stsz'); const fixed = u32(b, stsz.start + 4), N = u32(b, stsz.start + 8);
       this.frag = N === 0 && this.moofs.length > 0; this.trackId = tkhdId;
       if (!this.frag) {
@@ -705,7 +664,6 @@ const CORE = (() => {
         while (idx < N) { times[idx++] = t / ts; t += track.codec === 'pcm' ? 1 : 1024; }
         times[N] = t / ts;
         if (track.codec === 'pcm') {
-          // PCM：以 chunk 為封包（樣本＝音框）
           const pk = []; let si = 0;
           for (let c = 0; c < nc && si < N; c++) {
             let spc = 0; for (let k = sc.length - 1; k >= 0; k--) if (sc[k][0] <= c + 1) { spc = sc[k][1]; break; }
@@ -730,7 +688,6 @@ const CORE = (() => {
       return { duration: this.duration, track };
     }
     async *packets(fromSec = 0) {
-      const tr = this.track;
       if (this.pk) {
         for (const [o, n, t, d] of this.pk) { if (t + d < fromSec - 2) continue; yield { t, d, data: await readBytes(this.file, o, o + n) }; }
         return;
@@ -774,8 +731,6 @@ const CORE = (() => {
       }
     }
   }
-
-  /* ---------- MP3 / ADTS AAC 純音訊流 ---------- */
   class ESDemux {
     constructor(file) { this.file = file; }
     async open() {
@@ -814,8 +769,6 @@ const CORE = (() => {
       }
     }
   }
-
-  /* ---------- WAV / RF64 ---------- */
   class WavDemux {
     constructor(file) { this.file = file; this.name = 'WAV'; }
     async open() {
@@ -850,8 +803,6 @@ const CORE = (() => {
       }
     }
   }
-
-  /* ---------- Matroska / WebM ---------- */
   function ebmlId(b, p) { const x = b[p]; let len = 1, m = 0x80; while (len <= 4 && !(x & m)) { len++; m >>= 1; } if (len > 4) return null; let v = 0; for (let i = 0; i < len; i++) v = v * 256 + b[p + i]; return { len, v }; }
   function ebmlSize(b, p) { const x = b[p]; let len = 1, m = 0x80; while (len <= 8 && !(x & m)) { len++; m >>= 1; } if (len > 8) return null; let v = x & (m - 1), ones = v === m - 1; for (let i = 1; i < len; i++) { v = v * 256 + b[p + i]; if (b[p + i] !== 0xff) ones = false; } return { len, v, unknown: ones }; }
   const uintB = (b, p, n) => { let v = 0; for (let i = 0; i < n; i++) v = v * 256 + b[p + i]; return v; };
@@ -886,7 +837,6 @@ const CORE = (() => {
       }
       if (!tracksBuf) throw new Error('找不到 Tracks');
       this.duration = dur * this.scale / 1e9; this.segEnd = segEnd;
-      // 找第一個音軌
       const parse = (b, s, e2, fn) => { for (let p = s; p < e2;) { const i = ebmlId(b, p), z = ebmlSize(b, p + i.len), d = p + i.len + z.len; fn(i.v, d, z.v); p = d + z.v; } };
       let found = null;
       parse(tracksBuf, 0, tracksBuf.length, (id, d, n) => {
@@ -942,7 +892,7 @@ const CORE = (() => {
           if (c.id === 0xE7) { const b = await rd.bytes(p + c.hdr, c.size); cTime = uintB(b, 0, c.size); }
           else if (c.id === 0xA3 || c.id === 0xA0) {
             let bp = p + c.hdr, bsz = c.size;
-            if (c.id === 0xA0) { // BlockGroup → Block
+            if (c.id === 0xA0) {
               let q = bp; bp = -1;
               while (q < p + c.hdr + c.size) { const g = await this.el(rd, q); if (!g || g.size < 0) break; if (g.id === 0xA1) { bp = q + g.hdr; bsz = g.size; break; } q += g.hdr + g.size; }
             }
@@ -977,8 +927,6 @@ const CORE = (() => {
       if (!this.duration) this.duration = lastT;
     }
   }
-
-  /* ---------- AVI（含 OpenDML > 1GB） ---------- */
   class AVIDemux {
     constructor(file) { this.file = file; this.name = 'AVI'; }
     async open() {
@@ -1041,8 +989,6 @@ const CORE = (() => {
       }
     }
   }
-
-  /* ---------- FLV ---------- */
   class FLVDemux {
     constructor(file) { this.file = file; this.name = 'FLV'; }
     async open() {
@@ -1084,8 +1030,6 @@ const CORE = (() => {
       }
     }
   }
-
-  /* ---------- 判斷格式 ---------- */
   async function demuxFor(file) {
     const h = await readBytes(file, 0, 16);
     const t4 = str(h, 4, 4), t0 = str(h, 0, 4);
@@ -1108,7 +1052,6 @@ const CORE = (() => {
   }
   return { demuxFor, readBytes, parseASC, frameHeader, findCut, MP3Framer };
 })();
-
 /* ===== DECODE：封包 → 16 kHz 單聲道 PCM（WebCodecs 優先，decodeAudioData 備援；PCM 直接換算） ===== */
 const DECODE = (() => {
   const SR = 16000;
@@ -1192,7 +1135,6 @@ const DECODE = (() => {
     const last = pk[pk.length - 1], end = last.t + (last.d || 0);
     return { sr: ab.sampleRate, data: mono, t0: end - n / ab.sampleRate };
   }
-  /* 解出 [bs, be) 區間，pk 含前置封包 */
   async function decodeBlock(tr, pk, bs, be) {
     if (tr.codec === 'pcm') {
       const n = Math.max(1, Math.round((be - bs) * tr.sr)), out = new Float32Array(n);
@@ -1214,7 +1156,6 @@ const DECODE = (() => {
     for (let i = Math.max(0, -off); i < r.data.length && off + i < n; i++) { out[off + i] = r.data[i]; covered++; }
     return { pcm: await resample(out, r.sr), cover: covered / n };
   }
-  /* 封包流 → 約 blockSec 秒的區塊 */
   async function* blocks(demux, fromSec = 0, blockSec = 60, total = 0) {
     const tr = demux.track, PRE = tr.codec === 'pcm' ? 0 : (tr.codec === 'opus' ? 6 : 4);
     let hist = [], cur = [], bs = null, last = null;
@@ -1238,7 +1179,6 @@ const DECODE = (() => {
       yield await emit(end);
     }
   }
-  /* 試解第一段，確認瀏覽器能解此編碼 */
   async function probe(demux) {
     const tr = demux.track; if (tr.codec === 'pcm') return true;
     const pk = []; for await (const p of demux.packets(0)) { pk.push(p); if (pk.length >= 12) break; }
@@ -1250,7 +1190,6 @@ const DECODE = (() => {
   }
   return { blocks, probe, resample, pcmToMono, SR };
 })();
-
 /* ===== LOGIC：VAD、幻覺檢查、講者分群、斷句 ===== */
 const LOGIC = (() => {
   const FR = 320;
@@ -1367,7 +1306,6 @@ const LOGIC = (() => {
     K = relabel(lab, n);
     return { labels: lab, K };
   }
-  /* 依 Whisper 語言（每視窗）＋文字書寫系統判斷 */
   function scriptLang(text) {
     const t = text.replace(/[\s\d\p{P}\p{S}]/gu, ''); if (!t) return null;
     let han = 0, kana = 0, hang = 0, lat = 0;
@@ -1403,7 +1341,6 @@ const LOGIC = (() => {
   const RX_TASK = /(請.{0,15}(負責|處理|協助|提供|準備|完成|確認|追蹤|研議|評估|補充|彙整|提送|提出|說明|修正|聯繫|聯絡|安排|檢討|規劃)|負責|下次會議|期限|截止|之前(完成|提供|提送|送)|列管|追蹤|待辦|交辦|回覆)/;
   return { frameDb, speechMask, maskIntervals, speechSeconds, speechFrac, toWords, checkWindow, normalize, Online, cluster, scriptLang, LANG, buildUtterances, FLAG_TEXT, RX_DECISION, RX_TASK, fmt };
 })();
-
 /* ===== DOCX：自帶 ZIP 讀寫（不依賴外部函式庫），依空白範本欄位或 {標籤} 填入 ===== */
 const DOCX = (() => {
   const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main', XMLNS = 'http://www.w3.org/XML/1998/namespace';
@@ -1510,7 +1447,6 @@ const DOCX = (() => {
     const has = k => v[k] != null && (Array.isArray(v[k]) ? v[k].length : String(v[k]).trim() !== '');
     const lines = k => Array.isArray(v[k]) ? v[k] : String(v[k] || '').split('\n');
     const text = k => lines(k).join('\n');
-    // 1) {標籤} 或 {{標籤}}
     const rxTag = /\{\{?\s*([^{}\n]{1,30}?)\s*\}?\}/g;
     for (const p of origP) {
       const t = pText(p); if (!/\{[^{}\n]{1,30}\}/.test(t)) continue;
@@ -1524,7 +1460,6 @@ const DOCX = (() => {
       for (const r of kids(p, 'r').concat(kids(p, 'hyperlink'))) p.removeChild(r);
       const r = makeRun(doc, nt, null); if (rPr) r.insertBefore(rPr, r.firstChild); p.appendChild(r);
     }
-    // 2) 表格：左欄標籤、右欄空白
     for (const tr of all(doc, 'tr')) {
       const cells = kids(tr, 'tc');
       cells.forEach((tc, i) => {
@@ -1535,7 +1470,6 @@ const DOCX = (() => {
         lines(f.key).forEach(l => t.appendChild(newPara(doc, ref, l)));
       });
     }
-    // 3) 段落「標籤：」
     for (const p of origP) {
       if (!p.parentNode) continue;
       const t = pText(p); if (!t.trim()) continue;
@@ -1547,7 +1481,6 @@ const DOCX = (() => {
         else insertAt(doc, p, h.at, text(h.f.key).replace(/\n/g, '、'));
       }
     }
-    // 4) 標題段落（無冒號）
     for (const p of origP) {
       if (!p.parentNode || p.parentNode.localName === 'tc') continue;
       const f = matchField(pText(p).trim()); if (!f || !f.block || done.has(f.key)) continue;
@@ -1557,7 +1490,6 @@ const DOCX = (() => {
       done.add(f.key); if (!has(f.key)) continue;
       let ref = p; for (const l of lines(f.key)) { const np = newPara(doc, p, l); ref.parentNode.insertBefore(np, ref.nextSibling); ref = np; }
     }
-    // 5) 範本沒有的重要欄位附在文末
     const miss = FIELDS.filter(f => !done.has(f.key) && has(f.key) && (f.block || f.key === 'attendees' || f.key === 'title'));
     if (miss.length) {
       const sect = kids(body, 'sectPr')[0] || null;
@@ -1599,13 +1531,11 @@ const DOCX = (() => {
   }
   return { build, fields, readZip, entryData, writeZip, W };
 })();
-
 /* ===== TPL：範本匯入（.docx 直接使用；.odt、.doc 轉成同結構的 .docx 範本後填入） ===== */
 const TPL = (() => {
   const W = DOCX.W, enc = new TextEncoder();
   const xe = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const FONT = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="標楷體"/><w:sz w:val="24"/></w:rPr>';
-  // 段落文字（含 \t 定位、\n 換行）→ w:p
   function P(text, o = {}) {
     let runs = '';
     String(text).split('\n').forEach((ln, i) => {
@@ -1621,7 +1551,6 @@ const TPL = (() => {
     for (const r of rows) { x += '<w:tr>'; for (let i = 0; i < n; i++) { const paras = (r[i] == null ? [''] : r[i]); x += `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/></w:tcPr>${(paras.length ? paras : ['']).map(t => P(t)).join('')}</w:tc>`; } x += '</w:tr>'; }
     return x + '</w:tbl><w:p/>';
   }
-  // blocks: [{p:'文字', b, c}] 或 [{t:[[cellParas...], ...]}]
   function makeDocx(blocks) {
     const body = blocks.map(b => b.t ? TBL(b.t) : P(b.p, b)).join('');
     const doc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="${W}"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1304" w:bottom="1440" w:left="1304" w:header="851" w:footer="992" w:gutter="0"/></w:sectPr></w:body></w:document>`;
@@ -1631,8 +1560,6 @@ const TPL = (() => {
       { name: 'word/document.xml', data: enc.encode(doc) }
     ]);
   }
-
-  /* ---------- ODT（OpenDocument）---------- */
   const TX = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0', TB = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0';
   function odtText(el) {
     let s = '';
@@ -1672,8 +1599,6 @@ const TPL = (() => {
     if (!out.length) throw new Error('.odt 內沒有文字內容');
     return out;
   }
-
-  /* ---------- DOC（Word 97-2003，OLE 複合文件）---------- */
   function cfbStreams(buf) {
     const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
     if (dv.getUint32(0, true) !== 0xE011CFD0 || dv.getUint32(4, true) !== 0xE11AB1A1) throw new Error('不是有效的 .doc 檔');
@@ -1723,7 +1648,6 @@ const TPL = (() => {
       if (comp) { const s = fc / 2; for (let k = 0; k < cnt; k++) { const b = wd[s + k]; text += b >= 0x80 && b < 0xA0 ? CP1252[b - 0x80] : String.fromCharCode(b); fcs.push(s + k); } }
       else { for (let k = 0; k < cnt; k++) { text += String.fromCharCode(dv.getUint16(fc + k * 2, true)); fcs.push(fc + k * 2); } }
     }
-    // 段落屬性（是否在表格內、是否為列結尾）：PlcBtePapx → FKP → sprm 0x2416 / 0x2417
     let props = null;
     try {
       const fcB = dv.getUint32(0x102, true), lcbB = dv.getUint32(0x106, true), nB = (lcbB - 4) / 8;
@@ -1741,8 +1665,8 @@ const TPL = (() => {
               if (spra === 0 || spra === 1) sz = 1; else if (spra === 2 || spra === 4 || spra === 5) sz = 2; else if (spra === 3) sz = 4; else if (spra === 7) sz = 3;
               else { if (op === 0xD606 || op === 0xD608) { sz = dv.getUint16(y, true) + 2 - 1; } else sz = wd[y] + 1; }
               if (op === 0x2416) pr.inT = wd[y] !== 0; if (op === 0x2417) pr.ttp = wd[y] !== 0;
-              if (op === 0x6649) pr.inT = pr.inT || dv.getInt32(y, true) > 0; // sPItap
-              if (op === 0x244B) pr.inT = pr.inT || wd[y] !== 0; if (op === 0x244C) pr.ttp = pr.ttp || wd[y] !== 0; // 巢狀表格
+              if (op === 0x6649) pr.inT = pr.inT || dv.getInt32(y, true) > 0;
+              if (op === 0x244B) pr.inT = pr.inT || wd[y] !== 0; if (op === 0x244C) pr.ttp = pr.ttp || wd[y] !== 0;
               y += sz;
             }
           }
@@ -1758,7 +1682,6 @@ const TPL = (() => {
   function docBlocks(d) {
     if (typeof d === 'string') d = { text: d, fcs: [], props: null };
     const { text, fcs, props } = d;
-    // 移除欄位代碼（\x13 指令 \x14 結果 \x15 → 保留結果）
     const keep = []; let depth = 0; const inInstr = [];
     for (let i = 0; i < text.length; i++) {
       const ch = text[i];
@@ -1769,7 +1692,6 @@ const TPL = (() => {
       keep.push(i);
     }
     const clean = ch => ch === '\x0b' ? '\n' : ch === '\xa0' ? ' ' : ch === '\x1e' ? '-' : /[\x00-\x08\x0c\x0e-\x1f]/.test(ch) ? '' : ch;
-    // 切成單位：以 \r 或 \x07 結尾
     const units = []; let buf = '';
     for (const i of keep) {
       const ch = text[i];
@@ -1790,7 +1712,6 @@ const TPL = (() => {
       }
       if (cells.length) rows.push(cells); flush();
     } else {
-      // 備援：無段落屬性時，依「列結尾＝每列多一個空白 \x07」推算欄數
       let i = 0;
       while (i < units.length) {
         if (units[i].end === '\r') { out.push({ p: units[i].s }); i++; continue; }
@@ -1806,7 +1727,6 @@ const TPL = (() => {
     if (!out.length) throw new Error('.doc 內沒有文字內容');
     return out;
   }
-  /* 匯入任一格式 → { bytes: docx ArrayBuffer, kind, note } */
   async function importFile(file, DP) {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     const buf = await file.arrayBuffer(), h = new Uint8Array(buf.slice(0, 8));
@@ -1829,7 +1749,6 @@ const REF = (() => {
   const PDFJS_BASES = ['https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build', 'https://fastly.jsdelivr.net/npm/pdfjs-dist@4.10.38/build', 'https://unpkg.com/pdfjs-dist@4.10.38/build'];
   const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
   const unent = s => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => e[0] === '#' ? String.fromCodePoint(/^#x/i.test(e) ? parseInt(e.slice(2), 16) : +e.slice(1)) : (ENT[e.toLowerCase()] ?? m));
-  // XML → 純文字：段落結尾換行，tab/空白標記轉換，其餘標籤移除
   function xmlToText(xml, paraEnd, extra) {
     let s = xml;
     if (extra) s = extra(s);
@@ -1868,18 +1787,17 @@ const REF = (() => {
       const mt = (await z.get('mimetype')) || '';
       return { kind: /presentation/.test(mt) ? 'ODP 簡報' : /spreadsheet/.test(mt) ? 'ODS 試算表' : 'ODT 文件', text: t };
     }
-    const parts = await z.all(/\.(x?html?|xml)$/i); // EPUB 等
+    const parts = await z.all(/\.(x?html?|xml)$/i);
     const t = parts.filter(([nm]) => !/(^|\/)(\[Content_Types\]|container|.*\.opf|toc\.ncx)/i.test(nm)).map(([, x]) => xmlToText(x, /<\/(p|div|h\d|li|tr)>/gi)).join('\n');
     if (t.trim()) return { kind: 'ZIP 文件', text: t };
     throw new Error('無法辨識的壓縮格式');
   }
-  /* ---------- PPT（PowerPoint 97-2003） ---------- */
   function pptText(get) {
     const s = get('PowerPoint Document'); if (!s) throw new Error('找不到 PowerPoint Document');
     const dv = new DataView(s.buffer, s.byteOffset, s.byteLength), out = []; let p = 0;
     while (p + 8 <= s.length) {
       const vi = dv.getUint16(p, true), type = dv.getUint16(p + 2, true), len = dv.getUint32(p + 4, true); p += 8;
-      if ((vi & 0xF) === 0xF) continue;          // 容器：往內讀
+      if ((vi & 0xF) === 0xF) continue;
       if (p + len > s.length) break;
       if (type === 0x0FA0) { let t = ''; for (let i = 0; i + 1 < len; i += 2) t += String.fromCharCode(dv.getUint16(p + i, true)); out.push(t); }
       else if (type === 0x0FA8) { let t = ''; for (let i = 0; i < len; i++) t += String.fromCharCode(s[p + i]); out.push(t); }
@@ -1887,7 +1805,6 @@ const REF = (() => {
     }
     return out.join('\n').replace(/\r/g, '\n').replace(/\x0b/g, '\n').split('\n').filter(l => !/^(Click to edit|Second level|Third level|Fourth level|Fifth level|\*$|按一下以編輯|第二層|第三層|第四層|第五層)/.test(l.trim())).join('\n');
   }
-  // 無法結構解析時：從二進位資料抓出可讀字串（UTF-16LE 與 ASCII）
   function looseStrings(u8) {
     const out = []; let cur = '';
     for (let i = 0; i + 1 < u8.length; i += 2) {
@@ -1899,7 +1816,6 @@ const REF = (() => {
     let a = ''; for (let i = 0; i < u8.length; i++) { const c = u8[i]; if (c >= 0x20 && c < 0x7F) a += String.fromCharCode(c); else { if (a.length >= 5 && /[A-Za-z]{4}/.test(a)) out.push(a); a = ''; } }
     return out.join('\n');
   }
-  // BIFF8 共用字串表（SST＋CONTINUE）
   function xlsSST(wb) {
     const dv = new DataView(wb.buffer, wb.byteOffset, wb.byteLength); let p = 0; const recs = [];
     while (p + 4 <= wb.length) { const t = dv.getUint16(p, true), l = dv.getUint16(p + 2, true); recs.push([t, p + 4, l]); p += 4 + l; }
@@ -1935,7 +1851,6 @@ const REF = (() => {
     if (wb) { const t = xlsSST(wb); return t ? { kind: 'Excel 97-2003', text: t } : { kind: 'Excel 97-2003（近似擷取）', text: looseStrings(wb) }; }
     throw new Error('不支援的舊版 Office 檔');
   }
-  /* ---------- RTF ---------- */
   function fromRTF(bytes) {
     const s = new TextDecoder('latin1').decode(bytes);
     const cpm = s.match(/\\ansicpg(\d+)/), cp = cpm ? +cpm[1] : 950;
@@ -1973,7 +1888,6 @@ const REF = (() => {
     flush();
     return { kind: 'RTF', text: out };
   }
-  /* ---------- PDF（pdf.js） ---------- */
   let pdfjs = null;
   async function loadPdfjs() {
     if (pdfjs) return pdfjs;
@@ -1987,7 +1901,6 @@ const REF = (() => {
     }
     throw new Error('PDF 讀取元件無法載入（請確認網路）' + (last ? '：' + last.message : ''));
   }
-  /* PDF：先用內建解析器（不需網路），文字太少時再嘗試 pdf.js */
   async function fromPDF(buf, onPage) {
     let mine = null, err = null;
     try { mine = await PDFX.extract(buf, 2000, onPage); } catch (e) { err = e; }
@@ -2013,7 +1926,6 @@ const REF = (() => {
     if (!text.replace(/\s/g, '')) throw new Error('PDF 沒有文字層（可能是掃描圖片），無法擷取');
     return { kind: 'PDF' + (doc.numPages > N ? `（前 ${N} 頁）` : ''), text, parts: pages.map((t, i) => ({ label: '第 ' + (i + 1) + ' 頁', text: t })) };
   }
-  /* ---------- 純文字類 ---------- */
   function decodeText(u8) {
     if (u8[0] === 0xFF && u8[1] === 0xFE) return new TextDecoder('utf-16le').decode(u8);
     if (u8[0] === 0xFE && u8[1] === 0xFF) return new TextDecoder('utf-16be').decode(u8);
@@ -2034,20 +1946,16 @@ const REF = (() => {
     if (/^(txt|md|markdown|csv|tsv|json|srt|vtt|log|ini|yaml|yml)$/.test(ext) || !/[\x00-\x08\x0e-\x1f]/.test(t.slice(0, 4000))) return { kind: ext.toUpperCase() || '文字', text: t.replace(/^\uFEFF/, '') };
     throw new Error('不支援的檔案格式');
   }
-
-  /* ---------- 詞庫：從文字擷取專有名詞／關鍵詞 ---------- */
   const EDGE = /^[的了是在和與及或等之為也就而且但並把被將於以對讓向從由這那其每各本該此]|[的了是在和與及或等之為也就而且但並把被將於以對讓向從由這那其]$/;
   const COMMON = new Set(['我們', '你們', '他們', '大家', '今天', '目前', '主要', '相關', '進行', '可以', '需要', '因為', '所以', '如果', '已經', '還是', '這個', '那個', '一個', '什麼', '沒有', '是否', '以及', '包括', '其他', '部分', '方面', '問題', '情形', '說明', '內容', '辦理', '資料', '報告', '單位', '項目', '工作', '計畫書']);
   const EN_STOP = new Set(['the', 'and', 'for', 'with', 'that', 'this', 'from', 'are', 'was', 'were', 'will', 'have', 'has', 'not', 'but', 'you', 'all', 'can', 'page', 'http', 'https', 'www', 'com', 'html', 'outline', 'number', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'level', 'click', 'edit', 'master', 'title', 'style', 'styles', 'text', 'slide', 'slides', 'header', 'footer', 'date', 'time', 'notes', 'normal', 'default', 'calibri', 'arial', 'times', 'roman']);
   function terms(text, max = 80) {
     const sc = new Map();
     const add = (t, w) => sc.set(t, (sc.get(t) || 0) + w);
-    // 英文、縮寫、含數字代碼
     for (const m of text.match(/[A-Za-z][A-Za-z0-9.+\-_/&]*[A-Za-z0-9]/g) || []) {
       if (m.length < 2 || m.length > 32 || EN_STOP.has(m.toLowerCase())) continue;
       if (/[A-Z].*[A-Z]|[0-9]/.test(m) || m.length >= 6) add(m, m.length >= 3 ? 2 : 1);
     }
-    // 中文：短行（標題、表格欄位）＋重複出現的 n-gram
     const lines = text.split(/\n|\t/);
     for (const l of lines) { const c = l.replace(/[\s\d\p{P}\p{S}A-Za-z]/gu, ''); if (c.length >= 3 && c.length <= 10 && c === l.replace(/[\s\p{P}\p{S}]/gu, '')) add(c, 3); }
     const runs = text.match(/[\u3400-\u9fff\uf900-\ufaff]{2,}/g) || [];
@@ -2055,7 +1963,6 @@ const REF = (() => {
     for (const r of runs) for (let n = 3; n <= 8; n++) for (let i = 0; i + n <= r.length; i++) { const g = r.substr(i, n); cnt.set(g, (cnt.get(g) || 0) + 1); }
     const cand = [...cnt].filter(([g, c]) => c >= 2 && !EDGE.test(g) && !COMMON.has(g));
     const keep = cand.filter(([g, c]) => !cand.some(([h, d]) => h.length > g.length && d >= c && h.includes(g)));
-    // 詞界檢查：左右鄰字需多樣（或兩側皆為詞界），避免擷取到半截詞
     const flat = runs.join('|');
     for (const [g, c] of keep) {
       const L = new Set(), R = new Set(); let i = flat.indexOf(g);
@@ -2069,10 +1976,8 @@ const REF = (() => {
     for (const t of list) { if (out.some(o => o.includes(t) && o.length <= t.length + 4)) continue; out.push(t); if (out.length >= max) break; }
     return out;
   }
-  // Whisper 提示字串（上限約 200 字）
-  function promptOf(list) { let s = ''; for (const t of list) { if ((s + '、' + t).length > 200) break; s += (s ? '、' : '') + t; } return s; }
-
-  /* ---------- 依詞庫比對：英文大小寫直接校正；中文僅「1 字之差且錯字串未出現在資料中」時提出建議，不自動改字 ---------- */
+  // Whisper 提示字串：限 80 字以內（過長會擠壓模型可輸出的長度）
+  function promptOf(list) { let s = ''; for (const t of list) { if ((s + '、' + t).length > 80) break; s += (s ? '、' : '') + t; } return s; }
   const isCJK = c => /[\u3400-\u9fff\uf900-\ufaff]/.test(c);
   function correct(text, list, refText) {
     const fixes = [], hints = []; let s = text;
@@ -2099,18 +2004,13 @@ const REF = (() => {
   }
   return { extract, terms, promptOf, correct, looseStrings, pptText, fromRTF };
 })();
-
-
-
-if (typeof module !== 'undefined') module.exports = { DOCX, TPL, REF, PDFX, RAG, ZH };
 </script>
 <script>
 /* ===== APP ===== */
 (() => {
 'use strict';
-const VERSION = 'v11';
+const VERSION = 'v12';
 const SR = 16000, WIN = 30, MINW = 18;
-const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 const OPENCC_URLS = ['https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js', 'https://fastly.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js', 'https://unpkg.com/opencc-js@1.0.5/dist/umd/full.js'];
 const FF_BASES = [['https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm', 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'], ['https://fastly.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm', 'https://fastly.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'], ['https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm', 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm']];
 const SPK_MODEL = 'Xenova/wavlm-base-plus-sv', MT_MODEL = 'Xenova/nllb-200-distilled-600M';
@@ -2122,10 +2022,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const fmt = LOGIC.fmt;
 const letter = k => { let s = ''; k++; while (k > 0) { const m = (k - 1) % 26; s = String.fromCharCode(65 + m) + s; k = Math.floor((k - 1) / 26); } return s; };
 const dbg = (...a) => console.info('[逐字稿]', ...a);
-
-const S = { file: null, key: '', duration: 0, running: false, stop: false, processed: 0, t0: 0, p0: 0, wins: [], online: null, liveT: [], liveL: [], final: null, utts: [], tr: {}, playURL: null, playable: false, listenBuilt: 0, tplBuf: null, tplName: '', srcKind: '', stats: { recheck: 0, removed: 0, prompted: 0, aiFixed: 0, aiRejected: 0 }, spkLang: {}, langRun: 0, prompt: '', gloss: [], refs: [], refText: '', userTerms: [], removed: new Set(), detCache: new Map(), llm: {}, mode: 'fast', useLLM: true };
+const S = { file: null, key: '', duration: 0, running: false, stop: false, processed: 0, t0: 0, p0: 0, wins: [], online: null, liveT: [], liveL: [], final: null, utts: [], tr: {}, playURL: null, playable: false, listenBuilt: 0, tplBuf: null, tplName: '', srcKind: '', stats: { recheck: 0, removed: 0, prompted: 0, aiFixed: 0, aiRejected: 0, retried: 0 }, spkLang: {}, langRun: 0, prompt: '', gloss: [], refs: [], refText: '', userTerms: [], removed: new Set(), detCache: new Map(), llm: {} };
 window.__AVTX = { S, VERSION };
-
 /* ---------- 進度 ---------- */
 const CIRC = 2 * Math.PI * 88;
 function ring(pct, eta) { pct = Math.max(0, Math.min(100, pct)); $('ring').style.strokeDashoffset = (CIRC * (1 - pct / 100)).toFixed(1); $('pct').textContent = Math.floor(pct) + '%'; if (eta != null) $('eta').textContent = eta; }
@@ -2137,7 +2035,6 @@ function progress() {
   ring(tot ? done / tot * 100 : 0, eta);
   $('sub').textContent = tot ? `已處理 ${fmt(done)} / ${fmt(tot)}` : `已處理 ${fmt(done)}`;
 }
-
 /* ---------- IndexedDB ---------- */
 const DB = {
   db: null,
@@ -2146,7 +2043,6 @@ const DB = {
   get(k) { return this.tx('readonly', s => s.get(k)).catch(() => null); },
   put(k, v) { return this.tx('readwrite', s => s.put(v, k)).catch(e => dbg('存檔失敗', e)); }
 };
-
 /* ---------- 繁體 ---------- */
 let cc = null, ccTried = false;
 async function loadOpenCC() {
@@ -2154,10 +2050,9 @@ async function loadOpenCC() {
   for (const u of OPENCC_URLS) { try { await new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.onload = res; s.onerror = rej; setTimeout(() => rej(new Error('timeout')), 8000); document.head.appendChild(s); }); cc = OpenCC.Converter({ from: 'cn', to: 'tw' }); return; } catch (e) { dbg('OpenCC', u, e); } }
 }
 const toTW = t => cc ? cc(t) : ZH.s2t(t);
-
 /* ---------- 本機 AI：網路預檢 → 背景執行緒（Worker）→ 失敗時改在主執行緒執行 ---------- */
-const ENGINE_SRC = "function makeEngine(T, send, cfg) {\n  cfg = cfg || {};\n  try { if (cfg.remoteHost) T.env.remoteHost = cfg.remoteHost; } catch (e) { }\n  try { if (cfg.localPath) { T.env.allowLocalModels = true; T.env.localModelPath = cfg.localPath; T.env.allowRemoteModels = !!cfg.allowRemote; } else T.env.allowLocalModels = false; } catch (e) { }\n  try { const w = T.env.backends.onnx.wasm; if (cfg.wasmBlobs) w.wasmPaths = cfg.wasmBlobs; else if (cfg.wasmSwap && typeof w.wasmPaths === 'string') w.wasmPaths = w.wasmPaths.replace(cfg.wasmSwap[0], cfg.wasmSwap[1]); } catch (e) { }\nlet asr = null, asrWord = false, spkP = null, spkM = null, mt = null, lidOK = true, llm = null;\nconst prog = p => send({ type: 'dl', p });\nconst CANDS = ['zh', 'en', 'ja', 'ko', 'vi', 'th', 'id', 'ms', 'fr', 'de', 'es', 'ru'];\nasync function detectLang(audio) {\n  if (!lidOK) return { lang: 'zh', p: 0, fx: 0 };\n  try {\n    const gc = asr.model.generation_config || asr.model.config || {};\n    const l2i = gc.lang_to_id; if (!l2i) throw new Error('no lang_to_id');\n    const sot = gc.decoder_start_token_id != null ? gc.decoder_start_token_id : 50258;\n    const feats = await asr.processor(audio);\n    const dec = new T.Tensor('int64', BigInt64Array.from([BigInt(sot)]), [1, 1]);\n    const out = await asr.model({ input_features: feats.input_features, decoder_input_ids: dec });\n    const lg = out.logits, V = lg.dims[lg.dims.length - 1], data = lg.data, base = data.length - V;\n    const sc = []; for (const c of CANDS) { const id = l2i['<|' + c + '|>']; if (id != null && id < V) sc.push([c, Number(data[base + id])]); }\n    if (!sc.length) throw new Error('no candidates');\n    const mx = Math.max(...sc.map(x => x[1])); let z = 0; for (const x of sc) { x[2] = Math.exp(x[1] - mx); z += x[2]; }\n    sc.forEach(x => x[2] /= z); sc.sort((a, b) => b[2] - a[2]);\n    const zh = (sc.find(x => x[0] === 'zh') || [0, 0, 0])[2], top = sc[0];\n    // 國台語優先：外語需明顯勝出才採用\n    const fx = sc.filter(x => x[0] !== 'zh').reduce((a, x) => Math.max(a, x[2]), 0);\n    if (top[0] !== 'zh' && top[2] >= 0.6 && top[2] - zh >= 0.35) return { lang: top[0], p: top[2], fx };\n    return { lang: 'zh', p: zh, fx };\n  } catch (e) { lidOK = false; send({ type: 'note', msg: '語言偵測不可用，改以中文辨識：' + (e && e.message || e) }); return { lang: 'zh', p: 0, fx: 0 }; }\n}\nlet maxTok = 0;\nconst opt = (w, lang) => { const o = { task: 'transcribe', return_timestamps: w ? 'word' : true, language: lang }; if (maxTok) o.max_new_tokens = maxTok; return o; };\n// 會議資料提示詞（Whisper prompt）：轉成 <|startofprev|> + tokens；不支援或造成複誦即停用\nlet promptOK = true, promptLeak = 0; const pCache = new Map();\nfunction promptIds(text) {\n  if (!text || !promptOK || !asr || !asr.tokenizer) return null;\n  if (pCache.has(text)) return pCache.get(text);\n  let ids = null;\n  try {\n    const tk = asr.tokenizer, m = tk.model && tk.model.tokens_to_ids;\n    const sp = m && m.get ? m.get('<|startofprev|>') : null;\n    if (sp != null) { const t = tk.encode(' ' + text, null, { add_special_tokens: false }); ids = [sp, ...Array.from(t).slice(-200)]; }\n  } catch (e) { ids = null; }\n  pCache.set(text, ids); return ids;\n}\nconst leaks = (out, p) => { if (!p || !out) return false; const o = out.replace(/\\s/g, ''), q = p.replace(/\\s/g, ''); for (let i = 0; i + 10 <= q.length; i += 5) if (o.includes(q.substr(i, 10))) return true; return false; };\nasync function runASR(audio, lang, prompt) {\n  const ids = promptIds(prompt);\n  if (ids) {\n    try {\n      const o = await asr(audio, Object.assign(opt(asrWord, lang), { prompt_ids: ids }));\n      if (!leaks(o.text, prompt)) return { o, pu: true };\n      if (++promptLeak >= 3) promptOK = false;\n    } catch (e) { promptOK = false; send({ type: 'note', msg: '模型不接受會議資料提示詞，已改為不使用：' + (e && e.message || e) }); }\n  }\n  return { o: await asr(audio, opt(asrWord, lang)), pu: false };\n}\nlet chain = Promise.resolve();\nconst handle = async (m) => {\n  const ok = (o, tr) => send(Object.assign({ type: 'res', id: m.id, ok: true }, o), tr);\n  try {\n    if (m.type === 'loadASR') {\n      const errs = [];\n      for (const a of m.attempts) {\n        try { asr = await T.pipeline('automatic-speech-recognition', a.id, { device: a.device, dtype: a.dtype, progress_callback: prog }); await asr(new Float32Array(16000), opt(a.word, 'zh')); asrWord = a.word; return ok({ used: a }); }\n        catch (e) { errs.push(a.id + ':' + (e && e.message || e)); asr = null; }\n      }\n      throw new Error(errs.join(' | '));\n    }\n    if (m.type === 'asr') {\n      maxTok = m.maxTok || 0;\n      const L = m.lang ? { lang: m.lang, p: 1 } : await detectLang(m.audio);\n      const { o, pu } = await runASR(m.audio, L.lang, m.prompt);\n      return ok({ lang: L.lang, lp: L.p, fx: L.fx || 0, pu, text: o.text || '', chunks: (o.chunks || []).map(c => ({ text: c.text, ts: c.timestamp })) });\n    }\n    if (m.type === 'lid') return ok(await detectLang(m.audio));\n    if (m.type === 'loadSPK') {\n      const Cls = T.AutoModelForXVector || T.WavLMForXVector || T.AutoModel;\n      spkP = await T.AutoProcessor.from_pretrained(m.model, { progress_callback: prog });\n      try { spkM = await Cls.from_pretrained(m.model, { device: m.device, dtype: m.device === 'webgpu' ? 'fp32' : 'q8', progress_callback: prog }); await emb(new Float32Array(32000)); }\n      catch (e) { if (m.device === 'wasm') throw e; spkM = await Cls.from_pretrained(m.model, { device: 'wasm', dtype: 'q8', progress_callback: prog }); }\n      return ok({ dim: (await emb(new Float32Array(32000))).length });\n    }\n    if (m.type === 'embed') {\n      const outs = []; for (const [a, b] of m.ranges) outs.push(await emb(m.audio.subarray(a, b)));\n      const dim = outs.length ? outs[0].length : 0, flat = new Float32Array(outs.length * dim); outs.forEach((e, i) => flat.set(e, i * dim));\n      return ok({ dim, flat }, [flat.buffer]);\n    }\n    if (m.type === 'loadLLM') {\n      const errs = [];\n      for (const a of m.attempts) {\n        try { llm = await T.pipeline('text-generation', a.id, { device: a.device, dtype: a.dtype, progress_callback: prog }); return ok({ used: a }); }\n        catch (e) { errs.push(a.id + ':' + (e && e.message || e)); llm = null; }\n      }\n      throw new Error(errs.join(' | '));\n    }\n    if (m.type === 'llm') {\n      const o = await llm(m.messages, { max_new_tokens: m.max || 512, do_sample: false, return_full_text: false });\n      let g = Array.isArray(o) ? o[0] : o; g = g && g.generated_text;\n      if (Array.isArray(g)) { const last = g[g.length - 1]; g = last && last.content; }\n      return ok({ text: String(g || '') });\n    }\n    if (m.type === 'loadMT') { mt = await T.pipeline('translation', m.model, { device: 'wasm', dtype: 'q8', progress_callback: prog }); return ok({}); }\n    if (m.type === 'mt') { const res = []; for (const it of m.items) { const o = await mt(it.text, { src_lang: it.src, tgt_lang: 'zho_Hant' }); res.push(String((Array.isArray(o) ? o[0] : o).translation_text || '')); } return ok({ res }); }\n    throw new Error('unknown ' + m.type);\n  } catch (e) { send({ type: 'res', id: m.id, ok: false, error: String(e && e.message || e) }); }\n};\n// 同一引擎內依序執行（避免同一模型同時推論）\nreturn (m) => { chain = chain.then(() => handle(m)); return chain; };\nasync function emb(a) { const o = await spkM(await spkP(a)); const e = o.embeddings || o.logits; return Float32Array.from(e.data); }\n}\n";
-/* ---------- AI 元件來源：同網站自架 → 本機離線快照 → 多個 CDN 鏡像；模型：自架 → 瀏覽器快取 → huggingface.co → hf-mirror.com ---------- */
+const ENGINE_SRC = "function makeEngine(T, send, cfg) {\n  cfg = cfg || {};\n  try { if (cfg.remoteHost) T.env.remoteHost = cfg.remoteHost; } catch (e) { }\n  try { if (cfg.localPath) { T.env.allowLocalModels = true; T.env.localModelPath = cfg.localPath; T.env.allowRemoteModels = !!cfg.allowRemote; } else T.env.allowLocalModels = false; } catch (e) { }\n  try { const w = T.env.backends.onnx.wasm; if (cfg.wasmBlobs) w.wasmPaths = cfg.wasmBlobs; else if (cfg.wasmSwap && typeof w.wasmPaths === 'string') w.wasmPaths = w.wasmPaths.replace(cfg.wasmSwap[0], cfg.wasmSwap[1]); } catch (e) { }\n  let asr = null, asrWord = false, spkP = null, spkM = null, mt = null, lidOK = true, llm = null;\n  const prog = p => send({ type: 'dl', p });\n  const CANDS = ['zh', 'en', 'ja', 'ko', 'vi', 'th', 'id', 'ms', 'fr', 'de', 'es', 'ru'];\n  async function detectLang(audio) {\n    if (!lidOK) return { lang: 'zh', p: 0, fx: 0 };\n    try {\n      const gc = asr.model.generation_config || asr.model.config || {};\n      const l2i = gc.lang_to_id; if (!l2i) throw new Error('no lang_to_id');\n      const sot = gc.decoder_start_token_id != null ? gc.decoder_start_token_id : 50258;\n      const feats = await asr.processor(audio);\n      const dec = new T.Tensor('int64', BigInt64Array.from([BigInt(sot)]), [1, 1]);\n      const out = await asr.model({ input_features: feats.input_features, decoder_input_ids: dec });\n      const lg = out.logits, V = lg.dims[lg.dims.length - 1], data = lg.data, base = data.length - V;\n      const sc = []; for (const c of CANDS) { const id = l2i['<|' + c + '|>']; if (id != null && id < V) sc.push([c, Number(data[base + id])]); }\n      if (!sc.length) throw new Error('no candidates');\n      const mx = Math.max(...sc.map(x => x[1])); let z = 0; for (const x of sc) { x[2] = Math.exp(x[1] - mx); z += x[2]; }\n      sc.forEach(x => x[2] /= z); sc.sort((a, b) => b[2] - a[2]);\n      const zh = (sc.find(x => x[0] === 'zh') || [0, 0, 0])[2], top = sc[0];\n      // 國台語優先：外語需明顯勝出才採用\n      const fx = sc.filter(x => x[0] !== 'zh').reduce((a, x) => Math.max(a, x[2]), 0);\n      if (top[0] !== 'zh' && top[2] >= 0.6 && top[2] - zh >= 0.35) return { lang: top[0], p: top[2], fx };\n      return { lang: 'zh', p: zh, fx };\n    } catch (e) { lidOK = false; send({ type: 'note', msg: '語言偵測不可用，改以中文辨識：' + (e && e.message || e) }); return { lang: 'zh', p: 0, fx: 0 }; }\n  }\n  const opt = (w, lang) => ({ task: 'transcribe', return_timestamps: w ? 'word' : true, language: lang });\n  // 會議資料提示詞（Whisper prompt）：限 60 個 token，避免擠壓輸出長度；不支援、造成複誦或輸出變空白即自動停用\n  let promptOK = true, promptBad = 0; const pCache = new Map();\n  function promptIds(text) {\n    if (!text || !promptOK || !asr || !asr.tokenizer) return null;\n    if (pCache.has(text)) return pCache.get(text);\n    let ids = null;\n    try {\n      const tk = asr.tokenizer, m = tk.model && tk.model.tokens_to_ids;\n      const sp = m && m.get ? m.get('<|startofprev|>') : null;\n      if (sp != null) {\n        let t; try { t = tk.encode(' ' + text, { add_special_tokens: false }); } catch (e) { t = tk.encode(' ' + text); }\n        t = Array.from(t).filter(x => x < 50257);\n        if (t.length) ids = [sp, ...t.slice(-60)];\n      }\n    } catch (e) { ids = null; }\n    pCache.set(text, ids); return ids;\n  }\n  const leaks = (out, p) => { if (!p || !out) return false; const o = out.replace(/\\s/g, ''), q = p.replace(/\\s/g, ''); for (let i = 0; i + 10 <= q.length; i += 5) if (o.includes(q.substr(i, 10))) return true; return false; };\n  const textLen = o => String(o && o.text || '').replace(/[\\s\\p{P}\\p{S}]/gu, '').length;\n  async function runASR(audio, lang, prompt) {\n    const ids = promptIds(prompt);\n    if (ids) {\n      try {\n        const o = await asr(audio, Object.assign(opt(asrWord, lang), { prompt_ids: ids }));\n        if (textLen(o) > 0 && !leaks(o.text, prompt)) return { o, pu: true };\n        if (++promptBad >= 3) promptOK = false;\n      } catch (e) { promptOK = false; send({ type: 'note', msg: '模型不接受會議資料提示詞，已改為不使用：' + (e && e.message || e) }); }\n    }\n    return { o: await asr(audio, opt(asrWord, lang)), pu: false };\n  }\n  async function emb(a) { const o = await spkM(await spkP(a)); const e = o.embeddings || o.logits; return Float32Array.from(e.data); }\n  let chain = Promise.resolve();\n  const handle = async (m) => {\n    const ok = (o, tr) => send(Object.assign({ type: 'res', id: m.id, ok: true }, o), tr);\n    try {\n      if (m.type === 'loadASR') {\n        const errs = [];\n        for (const a of m.attempts) {\n          try {\n            asr = await T.pipeline('automatic-speech-recognition', a.id, { device: a.device, dtype: a.dtype, progress_callback: prog });\n            await asr(new Float32Array(16000), opt(a.word, 'zh')); asrWord = a.word; return ok({ used: a });\n          } catch (e) { errs.push(a.id + ':' + (e && e.message || e)); asr = null; }\n        }\n        throw new Error(errs.join(' | '));\n      }\n      if (m.type === 'asr') {\n        const L = m.lang ? { lang: m.lang, p: 1 } : await detectLang(m.audio);\n        const { o, pu } = await runASR(m.audio, L.lang, m.prompt);\n        return ok({ lang: L.lang, lp: L.p, fx: L.fx || 0, pu, text: o.text || '', chunks: (o.chunks || []).map(c => ({ text: c.text, ts: c.timestamp })) });\n      }\n      if (m.type === 'lid') return ok(await detectLang(m.audio));\n      if (m.type === 'loadSPK') {\n        const Cls = T.AutoModelForXVector || T.WavLMForXVector || T.AutoModel;\n        spkP = await T.AutoProcessor.from_pretrained(m.model, { progress_callback: prog });\n        try { spkM = await Cls.from_pretrained(m.model, { device: m.device, dtype: m.device === 'webgpu' ? 'fp32' : 'q8', progress_callback: prog }); await emb(new Float32Array(32000)); }\n        catch (e) { if (m.device === 'wasm') throw e; spkM = await Cls.from_pretrained(m.model, { device: 'wasm', dtype: 'q8', progress_callback: prog }); }\n        return ok({ dim: (await emb(new Float32Array(32000))).length });\n      }\n      if (m.type === 'embed') {\n        const outs = []; for (const [a, b] of m.ranges) outs.push(await emb(m.audio.subarray(a, b)));\n        const dim = outs.length ? outs[0].length : 0, flat = new Float32Array(outs.length * dim); outs.forEach((e, i) => flat.set(e, i * dim));\n        return ok({ dim, flat }, [flat.buffer]);\n      }\n      if (m.type === 'loadLLM') {\n        const errs = [];\n        for (const a of m.attempts) {\n          try { llm = await T.pipeline('text-generation', a.id, { device: a.device, dtype: a.dtype, progress_callback: prog }); return ok({ used: a }); }\n          catch (e) { errs.push(a.id + ':' + (e && e.message || e)); llm = null; }\n        }\n        throw new Error(errs.join(' | '));\n      }\n      if (m.type === 'llm') {\n        const o = await llm(m.messages, { max_new_tokens: m.max || 512, do_sample: false, return_full_text: false });\n        let g = Array.isArray(o) ? o[0] : o; g = g && g.generated_text;\n        if (Array.isArray(g)) { const last = g[g.length - 1]; g = last && last.content; }\n        return ok({ text: String(g || '') });\n      }\n      if (m.type === 'loadMT') { mt = await T.pipeline('translation', m.model, { device: 'wasm', dtype: 'q8', progress_callback: prog }); return ok({}); }\n      if (m.type === 'mt') { const res = []; for (const it of m.items) { const o = await mt(it.text, { src_lang: it.src, tgt_lang: 'zho_Hant' }); res.push(String((Array.isArray(o) ? o[0] : o).translation_text || '')); } return ok({ res }); }\n      throw new Error('unknown ' + m.type);\n    } catch (e) { send({ type: 'res', id: m.id, ok: false, error: String(e && e.message || e) }); }\n  };\n  // 同一引擎內依序執行（避免同一模型同時推論）\n  return (m) => { chain = chain.then(() => handle(m)); return chain; };\n}\n";
+/* ---------- AI 元件來源：同網站自架 → 多個 CDN 鏡像 → 本機離線快照；模型：自架 → 瀏覽器快取 → huggingface.co → hf-mirror.com ---------- */
 const TF_VER = '3.8.1';
 const LIB_LOCAL = () => new URL('./lib/transformers.min.js', location.href).href;
 const CDN_HOSTS = [
@@ -2179,7 +2074,6 @@ const MODEL_HOSTS = [
 async function reach(url, ms = 12000, init) {
   try { const c = new AbortController(), t = setTimeout(() => c.abort(), ms); const r = await fetch(url, Object.assign({ mode: 'cors', cache: 'no-store', signal: c.signal }, init || {})); clearTimeout(t); try { r.body && r.body.cancel(); } catch (e) { } return r.ok; } catch (e) { return false; }
 }
-// 模型主機：小檔（config）＋大檔（經 LFS／xet CDN 轉址）都要能下載
 async function hostOK(host) {
   if (!await reach(host + PROBE_MODEL + '/resolve/main/config.json')) return false;
   return reach(host + PROBE_MODEL + '/resolve/main/onnx/encoder_model_quantized.onnx', 20000, { headers: { Range: 'bytes=0-1023' } });
@@ -2193,17 +2087,16 @@ async function cachedModels() {
   } catch (e) { }
   return { set, host };
 }
-/* ---- 離線快照：把 AI 程式（含相依模組）與執行元件（wasm）存進瀏覽器 IndexedDB ---- */
 const SPEC_RX = [/\b(?:import|export)\s*(?:[\w*${}\s,]*?\s*from\s*)?(["'])([^"'\n]+)\1/g, /\bimport\(\s*(["'])([^"'\n]+)\1\s*\)/g];
 function specsOf(t) { const out = []; for (const rx of SPEC_RX) { rx.lastIndex = 0; let m; while ((m = rx.exec(t))) out.push(m[2]); } return out; }
 const relSpec = s => /^(\.{1,2}\/|\/|https?:)/.test(s);
 async function snapshotLib(entry, wasmHosts) {
   const files = {}, order = [];
-  const q = [entry]; let first = null;
+  const q = [entry];
   while (q.length) {
     const u = q.shift(); if (files[u] != null) continue;
     const r = await fetch(u, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + u);
-    const t = await r.text(); files[u] = { text: t, final: r.url || u }; order.push(u); if (!first) first = r.url || u;
+    const t = await r.text(); files[u] = { text: t, final: r.url || u }; order.push(u);
     for (const s of specsOf(t)) if (relSpec(s)) q.push(new URL(s, r.url || u).href);
     if (order.length > 80) throw new Error('模組數量過多');
   }
@@ -2247,9 +2140,8 @@ async function preflight() {
   if (libOK.local) libs.push(LIBS[0]);
   for (const L of LIBS.slice(1)) if (libOK[L.id]) libs.push(L);
   if (snap) libs.push({ id: 'offline', snap });
-  if (!libs.length) libs.push(...LIBS.slice(1, 3)); // 預檢可能被代理誤判：仍嘗試
+  if (!libs.length) libs.push(...LIBS.slice(1, 3));
   const cfg = {};
-  // 模型來源：已快取的主機優先（快取以網址為鍵），其次可連線的主機
   const reachable = MODEL_HOSTS.find(M => mh[M.id]);
   cfg.remoteHost = (cm.host && (cm.set.size && (!reachable || cm.host === reachable.host))) ? cm.host : reachable ? reachable.host : (cm.host || 'https://huggingface.co/');
   if (mh.local) { cfg.localPath = new URL('./models/', location.href).href; cfg.allowRemote = !!reachable; }
@@ -2268,7 +2160,7 @@ async function preflight() {
 function netError(pf, detail) {
   const where = location.protocol === 'file:' ? '（目前是直接開啟電腦裡的 HTML 檔）' : '';
   const e = new Error((pf.blocked.length ? `目前網路無法連線到：${pf.blocked.join('；')}${where}。` : 'AI 辨識元件無法載入。') +
-    '解決方式（擇一）：① 在家裡網路或手機熱點開啟本頁，按「準備離線使用」下載一次，之後在公司網路用同一瀏覽器、同一網址即可使用；② 請 IT 開放 cdn.jsdelivr.net、huggingface.co、cdn-lfs.hf.co、cas-bridge.xethub.hf.co；③ 將 AI 元件放到本頁同一網站的 lib／models 資料夾。' + (detail ? `（技術資訊：${detail}）` : ''));
+    '解決方式（擇一）：① 先在家裡網路或手機熱點用本頁轉錄一次（會自動把 AI 元件存進瀏覽器），之後在公司網路用同一瀏覽器、同一網址即可使用；② 請 IT 開放 cdn.jsdelivr.net、huggingface.co、cdn-lfs.hf.co、cas-bridge.xethub.hf.co；③ 將 AI 元件放到本頁同一網站的 lib／models 資料夾。' + (detail ? `（技術資訊：${detail}）` : ''));
   e.unreadable = true; e.net = true; return e;
 }
 const W = {
@@ -2288,10 +2180,9 @@ const W = {
       w.onerror = ev => {
         ev.preventDefault && ev.preventDefault();
         if (!done) return fin(false, new Error('背景執行緒無法載入'));
-        // 執行中當掉：移出運算池，進行中的工作改由其他引擎或重新啟動處理
         this.eng = this.eng.filter(x => x !== e); e.dead = true;
         for (const [id, p] of this.pend) if (p.e === e) { this.pend.delete(id); p.rej(new Error('AI 元件意外停止（可能記憶體不足）')); }
-        if (e.spk) { this.spk = false; } if (e.mt) this.mt = false;
+        if (e.spk) { this.spk = false; } if (e.mt) this.mt = false; if (e.llm) this.llm = null;
         if (!this.eng.length) { this.dead = true; this.asr = false; }
       };
     });
@@ -2327,7 +2218,6 @@ const W = {
     })();
     try { await this.booting; } finally { this.booting = null; }
   },
-  reset() { for (const e of this.eng) { try { e.w && e.w.terminate(); } catch (x) { } e.dead = true; } this.eng = []; for (const p of this.pend.values()) p.rej(new Error('已重設')); this.pend.clear(); this.asr = this.spk = this.mt = false; this.llm = null; this.growing = null; },
   pick(kind) {
     const live = this.eng.filter(e => !e.dead);
     if (!live.length) return null;
@@ -2359,7 +2249,6 @@ function dl(p) {
   let a = 0, b = 0; for (const [x, y] of Object.values(dlState)) { a += x; b += y; }
   if (b) $('sub').textContent = `下載 AI 模型 ${Math.round(a / b * 100)}%（僅第一次需要）`;
 }
-// 運算池大小：沒有顯示卡（CPU 運算）時，同時開多個引擎分攤到多個 CPU 核心
 function poolSize(gpu) {
   if (window.__AVTX_POOL) return window.__AVTX_POOL;
   if (gpu || W.mode.startsWith('main')) return 1;
@@ -2368,16 +2257,13 @@ function poolSize(gpu) {
 }
 let ensuring = null;
 const ASR_IDS = { LARGE: 'onnx-community/whisper-large-v3-turbo', SMALL: 'onnx-community/whisper-small', BASE: 'onnx-community/whisper-base' };
-const LLM_IDS = { fast: 'onnx-community/Qwen2.5-0.5B-Instruct', precise: 'onnx-community/Qwen2.5-1.5B-Instruct' };
-function asrPlan(mode, gpu) {
+const LLM_IDS = { small: 'onnx-community/Qwen2.5-0.5B-Instruct', big: 'onnx-community/Qwen2.5-1.5B-Instruct' };
+/* 自動選擇辨識設定（不顯示給使用者）：有顯示卡用 large-v3-turbo；沒有顯示卡用 small；都失敗才用 base */
+function asrPlan(gpu) {
   const gd = id => ({ encoder_model: id.includes('large') && gpu && gpu.f16 ? 'fp16' : 'fp32', decoder_model_merged: 'q4' });
   const at = [];
-  if (mode === 'precise') {
-    if (gpu) at.push({ id: ASR_IDS.LARGE, word: false, device: 'webgpu', dtype: gd(ASR_IDS.LARGE) }, { id: ASR_IDS.SMALL, word: false, device: 'webgpu', dtype: gd(ASR_IDS.SMALL) });
-    at.push({ id: ASR_IDS.SMALL, word: false, device: 'wasm', dtype: 'q8' });
-  } else {
-    if (gpu) at.push({ id: ASR_IDS.SMALL, word: false, device: 'webgpu', dtype: gd(ASR_IDS.SMALL) });
-  }
+  if (gpu) at.push({ id: ASR_IDS.LARGE, word: false, device: 'webgpu', dtype: gd(ASR_IDS.LARGE) }, { id: ASR_IDS.SMALL, word: false, device: 'webgpu', dtype: gd(ASR_IDS.SMALL) });
+  at.push({ id: ASR_IDS.SMALL, word: false, device: 'wasm', dtype: 'q8' });
   at.push({ id: ASR_IDS.BASE, word: false, device: 'wasm', dtype: 'q8' }, { id: ASR_IDS.BASE + '_timestamped', word: true, device: 'wasm', dtype: 'q8' });
   return at;
 }
@@ -2388,12 +2274,11 @@ async function detectGPU() {
   return (W.gpu = gpu);
 }
 async function ensureModels0() {
-  if (W.asrMode && W.asrMode !== S.mode && W.eng.length) { dbg('切換模式，重新載入模型'); W.reset(); }
   await W.start();
   const gpu = await detectGPU();
   if (!W.eng.some(e => e.asr)) {
     stage('準備語音辨識模型', '');
-    const e = W.eng[0]; const r = await W.call({ type: 'loadASR', attempts: asrPlan(S.mode, gpu) }, null, e); e.asr = true; W.asr = true; W.used = r.used; W.asrMode = S.mode; dbg('辨識模型', r.used);
+    const e = W.eng[0]; const r = await W.call({ type: 'loadASR', attempts: W.used ? [W.used] : asrPlan(gpu) }, null, e); e.asr = true; W.asr = true; W.used = r.used; dbg('辨識模型', r.used);
     autoSnapshot();
   }
   if (!W.spk && !W.spkFail) {
@@ -2401,7 +2286,6 @@ async function ensureModels0() {
     const e = W.eng[0];
     try { await W.call({ type: 'loadSPK', model: SPK_MODEL, device: gpu ? 'webgpu' : 'wasm' }, null, e); e.spk = true; W.spk = true; } catch (err) { W.spkFail = true; dbg('聲紋模型失敗（不分講者）', err); }
   }
-  // 其他引擎在背景載入（不阻擋開始轉錄）
   const want = poolSize(gpu);
   W.size = want;
   if (W.eng.length < want && !W.growing) {
@@ -2415,18 +2299,16 @@ async function ensureModels0() {
   }
   window.__AVTX.pool = W.eng.length;
 }
-/* 語言模型（整句校正）：只在第一個引擎載入；其他辨識引擎先關閉以釋放記憶體 */
+/* 語言模型（整句校正）：自動選擇大小；只在第一個引擎載入，其他辨識引擎先關閉以釋放記憶體 */
 async function ensureLLM() {
   if (W.llm) return W.llm; if (W.llmFail) return null;
   await W.start();
   const gpu = await detectGPU();
   for (const e of W.eng.slice(1)) { try { e.w && e.w.terminate(); } catch (x) { } e.dead = true; }
   W.eng = W.eng.slice(0, 1);
-  const big = S.mode === 'precise' && gpu, at = [];
-  if (big) at.push({ id: LLM_IDS.precise, device: 'webgpu', dtype: 'q4f16' });
-  if (gpu) at.push({ id: LLM_IDS.fast, device: 'webgpu', dtype: 'q4f16' });
-  if (S.mode === 'precise' && !gpu) at.push({ id: LLM_IDS.precise, device: 'wasm', dtype: 'q4' });
-  at.push({ id: LLM_IDS.fast, device: 'wasm', dtype: 'q4' });
+  const at = [];
+  if (gpu) at.push({ id: LLM_IDS.big, device: 'webgpu', dtype: 'q4f16' }, { id: LLM_IDS.small, device: 'webgpu', dtype: 'q4f16' });
+  at.push({ id: LLM_IDS.small, device: 'wasm', dtype: 'q4' });
   try { stage('準備 AI 校正語言模型', '首次需下載約 0.4–1.2 GB（只需一次）'); const r = await W.call({ type: 'loadLLM', attempts: at }, null, W.eng[0]); W.llm = r.used; W.eng[0].llm = true; dbg('語言模型', r.used); return W.llm; }
   catch (e) { W.llmFail = true; dbg('語言模型載入失敗', e); return null; }
 }
@@ -2441,7 +2323,7 @@ function autoSnapshot(force) {
       const L = LIBS.find(x => x.id === W.libId); if (!L || !L.url) return old;
       const hosts = CDN_HOSTS.filter(h => W.pf && W.pf.libOK[h.id]).map(h => h.base);
       const snap = await snapshotLib(L.url(), hosts.length ? hosts : CDN_HOSTS.map(h => h.base));
-      await DB.put('libsnap|' + TF_VER, snap); dbg('已建立離線快照', Object.keys(snap.files).length, Object.keys(snap.wasm)); offlineStatus(); return snap;
+      await DB.put('libsnap|' + TF_VER, snap); dbg('已建立離線快照', Object.keys(snap.files).length, Object.keys(snap.wasm)); return snap;
     } catch (e) { dbg('離線快照失敗', e); return null; } finally { snapping = null; }
   })();
   return snapping;
@@ -2450,7 +2332,6 @@ async function ensureMT() {
   if (W.mt) return true; if (W.mtFail) return false;
   try { const e = W.pick('mt'); await W.call({ type: 'loadMT', model: MT_MODEL }, null, e); e.mt = true; W.mt = true; return true; } catch (e) { W.mtFail = true; dbg('翻譯模型失敗', e); return false; }
 }
-
 /* ---------- 來源：原生解析 → FFmpeg.wasm → 播放擷取 ---------- */
 async function blobURL(url, type) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return URL.createObjectURL(new Blob([await r.arrayBuffer()], { type })); }
 class FFSource {
@@ -2539,7 +2420,6 @@ async function openSource(file) {
   dbg('無法開啟', errs);
   const e = new Error('無法讀取這個檔案的聲音。可能原因：不是影音檔、檔案損毀或受保護、沒有聲音軌；若是 WMV 等需轉檔的格式，請確認電腦可以連上網路後再試一次。'); e.unreadable = true; throw e;
 }
-
 /* ---------- 播放器（原檔不能播放時改用聆聽副本） ---------- */
 function canPlay(file) {
   return new Promise(res => { const v = document.createElement('video'), u = URL.createObjectURL(file); let done = false; const fin = x => { if (done) return; done = true; v.removeAttribute('src'); v.load(); URL.revokeObjectURL(u); res(x); }; v.preload = 'metadata'; v.onloadedmetadata = () => fin(isFinite(v.duration) && v.duration > 0 && (v.videoWidth > 0 || v.mozHasAudio !== false)); v.onerror = () => fin(false); setTimeout(() => fin(false), 8000); v.src = u; });
@@ -2564,7 +2444,6 @@ async function buildListen() {
   S.listenBuilt = S.wins.length;
   return new Blob([h.buffer, ...parts], { type: 'audio/wav' });
 }
-
 /* ---------- 講者 ---------- */
 function addOnline(w) {
   if (!w.emb || !w.embT.length) return;
@@ -2612,10 +2491,11 @@ function decorate(utts) {
 /* ---------- AI 整句校正（瀏覽器內語言模型＋會議資料檢索），輸出經防幻覺檢查才採用 ---------- */
 const SYS_PROMPT = '你是會議逐字稿校對員。工作：依「參考資料」與上下文，修正語音辨識造成的錯字（同音字、近音字、專有名詞、法規名稱、單位）與標點，並在不改變原意的前提下把語句修順。嚴格規則：1. 不可加入原句沒有的資訊、數字或結論；2. 不可刪除有意義的內容；3. 沒把握就保留原文；4. 使用台灣繁體中文；5. 只輸出 JSON，例如 {"1":"修正後句子","2":"修正後句子"}。';
 async function aiPass() {
-  if (!S.useLLM) return;
+  const gpu = await detectGPU();
   const sp = S.utts.filter(u => u.kind === 'speech' && u.lang === 'zh' && u.raw && u.raw.replace(/\s/g, '').length >= 4);
   const strong = u => u.fixes.length || (u.flags && u.flags.size) || (RAG.ready() && (RAG.search(u.raw, 1)[0] || {}).score >= 12);
-  const todo = sp.filter(u => !S.llm[ukey(u)] && (S.mode === 'precise' || strong(u)));
+  // 自動判斷：有顯示卡時整篇校正；沒有顯示卡時只校正有疑慮或與會議資料相關的句子（避免耗時過久）
+  const todo = sp.filter(u => !S.llm[ukey(u)] && (gpu || strong(u)));
   window.__AVTX.aiTodo = todo.length;
   if (!todo.length) return;
   if (!await ensureLLM()) { stage('AI 整句校正略過', '語言模型無法載入（可能是網路限制），已保留依資料的用字校正結果。'); await sleep(1200); return; }
@@ -2635,7 +2515,7 @@ async function aiPass() {
     try { const m = out.match(/\{[\s\S]*\}/); if (m) obj = JSON.parse(m[0]); } catch (e) { obj = null; }
     if (!obj) { obj = {}; for (const line of out.split('\n')) { const m = line.match(/^\s*(\d+)[.、:：)]\s*(.+)$/); if (m) obj[m[1]] = m[2]; } }
     b.forEach((u, i) => {
-      const r = RAG.guard(u.text, obj[String(i + 1)], ctxText, S.mode !== 'precise');
+      const r = RAG.guard(u.text, obj[String(i + 1)], ctxText, true);
       const k = ukey(u);
       if (r.ok && r.text !== u.text) S.llm[k] = { t: r.text }; else S.llm[k] = { keep: 1, why: r.ok ? '' : r.why };
       if (!r.ok) S.stats.aiRejected++; else if (r.text !== u.text) S.stats.aiFixed++;
@@ -2666,11 +2546,9 @@ async function finalize() {
   await translate(S.utts);
   render();
 }
-
 /* ---------- 單一視窗（≤30 秒）：第一階段可平行（多引擎），第二階段依序提交 ---------- */
-async function asrRun(a, off, lang) {
-  // 限制輸出長度（約每秒 7 個字的上限）：避免模型陷入重複迴圈而浪費時間
-  const msg = () => ({ type: 'asr', audio: a.slice(), offset: off, lang, prompt: S.prompt || null, maxTok: Math.min(440, Math.max(48, Math.round(a.length / SR * (S.mode === 'precise' ? 9 : 7)))) });
+async function asrRun(a, off, lang, noPrompt) {
+  const msg = () => ({ type: 'asr', audio: a.slice(), offset: off, lang, prompt: noPrompt ? null : (S.prompt || null) });
   let r;
   for (let tries = 0; ; tries++) {
     try { r = await W.call(msg()); break; }
@@ -2683,8 +2561,8 @@ async function asrRun(a, off, lang) {
   const words = LOGIC.toWords(r.chunks.length ? r.chunks : [{ text: r.text, ts: [0, a.length / SR] }], off, a.length / SR);
   words.forEach(w => w.lang = r.lang); return { words, lang: r.lang, fx: r.fx || 0 };
 }
-// 語言穩定（連續多段皆為中文、無外語跡象）時，跳過大部分的語言偵測以節省一次編碼運算；每 4 段仍抽查一次
-function langHint(idx) { const fast = S.mode !== 'precise'; return S.langRun >= (fast ? 2 : 3) && idx % (fast ? 6 : 4) !== 0 ? 'zh' : undefined; }
+function langHint(idx) { return S.langRun >= 3 && idx % 4 !== 0 ? 'zh' : undefined; }
+const wordChars = ws => ws.reduce((a, w) => a + String(w.t).replace(/[\s\p{P}\p{S}]/gu, '').length, 0);
 async function phase1(audio, offset, idx) {
   const dur = audio.length / SR;
   const rec = { s: +offset.toFixed(3), e: +(offset + dur).toFixed(3), words: [], gaps: [], embT: [], emb: new Float32Array(0), speech: 0 };
@@ -2695,7 +2573,7 @@ async function phase1(audio, offset, idx) {
   if (rec.speech < 0.3) return { rec, audio };
   const embJob = (async () => {
     if (!W.spk) return;
-    const L = EMB_LEN * SR, H = (S.mode === 'precise' ? EMB_HOP : EMB_HOP * 2) * SR, ranges = [];
+    const L = EMB_LEN * SR, H = EMB_HOP * SR, ranges = [];
     for (let a = 0; a + L <= audio.length; a += H) if (LOGIC.speechFrac(mask, a / SR, (a + L) / SR, 0) >= 0.5) ranges.push([a, a + L]);
     if (!ranges.length && audio.length >= SR && rec.speech >= 1) ranges.push([0, Math.min(audio.length, L)]);
     if (!ranges.length) return;
@@ -2710,8 +2588,14 @@ async function phase1(audio, offset, idx) {
   let first = null, chk = null;
   const asrJob = (async () => {
     first = await asrRun(audio, offset, langHint(idx));
+    // 品質檢查：有明顯語音但幾乎沒文字 → 不用提示詞、指定中文再辨識一次
+    if (rec.speech >= 3 && wordChars(first.words) < rec.speech * 0.5) {
+      S.stats.retried++;
+      const again = await asrRun(audio, offset, 'zh', true);
+      if (wordChars(again.words) > wordChars(first.words)) first = again;
+    }
     chk = LOGIC.checkWindow(first.words, mask, offset);
-    if (S.mode === 'precise' && chk.report.severity >= 1 && dur > 8) {
+    if (chk.report.severity >= 1 && dur > 8) {
       const cut = CORE.findCut(audio, SR, dur * 0.35, dur * 0.65);
       const [x, y] = await Promise.all([asrRun(audio.subarray(0, cut), offset, first.lang), asrRun(audio.subarray(cut), offset + cut / SR, first.lang)]);
       const c2 = LOGIC.checkWindow(x.words.concat(y.words), mask, offset); S.stats.recheck++;
@@ -2728,7 +2612,6 @@ async function phase2(P) {
   if (!rec.err && chk) {
     try {
       const labs = S.liveL.slice(liveFrom), lt = S.liveT.slice(liveFrom);
-      // 視窗內語言混雜：逐段確認語言（外語視窗、或非主要講者且尚未確認語言者），語言不同者以該語言重新辨識
       let words = chk.words;
       const cuts = []; for (let j = 1; j < labs.length; j++) if (labs[j] !== labs[j - 1]) cuts.push((lt[j] + lt[j - 1]) / 2);
       const labOf = (x, y) => { const c = {}; let best = -1, bn = 0; for (let j = 0; j < lt.length; j++) if (lt[j] >= x && lt[j] <= y) { c[labs[j]] = (c[labs[j]] || 0) + 1; if (c[labs[j]] > bn) { bn = c[labs[j]]; best = labs[j]; } } return best; };
@@ -2737,9 +2620,9 @@ async function phase2(P) {
       const segs = [];
       for (const g of LOGIC.maskIntervals(mask, offset, 0.5)) { let a = g[0]; for (const c of cuts) if (c > a + 0.5 && c < g[1] - 0.5) { segs.push([a, c]); a = c; } segs.push([a, g[1]]); }
       const wide = first.lang !== 'zh' || first.fx >= 0.15;
-      let checks = 0, foreign = false; const maxChecks = S.mode === 'precise' ? 12 : 3;
+      let checks = 0, foreign = false;
       for (const g of segs) {
-        if (g[1] - g[0] < 1.5 || checks >= maxChecks) continue;
+        if (g[1] - g[0] < 1.5 || checks >= 12) continue;
         const k = labOf(g[0], g[1]);
         if (!wide && (k === dom || k < 0 || known(k))) continue;
         checks++;
@@ -2757,8 +2640,8 @@ async function phase2(P) {
       }
       if (words !== chk.words) { chk = LOGIC.checkWindow(words, mask, offset); words = chk.words; }
       // 有語音但沒有文字的空檔：單獨再辨識一次（平行）
-      const gaps = chk.report.gaps.slice(0, S.mode === 'precise' ? 4 : 1).map(g => [g, Math.max(0, Math.floor((g[0] - 0.5 - offset) * SR)), Math.min(audio.length, Math.ceil((g[1] + 0.5 - offset) * SR))]).filter(x => x[2] - x[1] >= SR);
-      const rr = await Promise.all(gaps.map(([g, a0, a1]) => { S.stats.recheck++; return asrRun(audio.subarray(a0, a1), offset + a0 / SR, first.lang); }));
+      const gaps = chk.report.gaps.slice(0, 4).map(g => [g, Math.max(0, Math.floor((g[0] - 0.5 - offset) * SR)), Math.min(audio.length, Math.ceil((g[1] + 0.5 - offset) * SR))]).filter(x => x[2] - x[1] >= SR);
+      const rr = await Promise.all(gaps.map(([g, a0, a1]) => { S.stats.recheck++; return asrRun(audio.subarray(a0, a1), offset + a0 / SR, first.lang, true); }));
       rr.forEach((r, i) => { const g = gaps[i][0]; const add = r.words.filter(w => (w.s + w.e) / 2 >= g[0] - 0.3 && (w.s + w.e) / 2 <= g[1] + 0.3); if (add.length) words = words.concat(add).sort((x, y) => x.s - y.s); });
       if (words !== chk.words) chk = LOGIC.checkWindow(words, mask, offset);
       S.stats.removed += chk.report.removed;
@@ -2784,10 +2667,9 @@ async function keepAwake() { try { if ('wakeLock' in navigator && document.visib
 document.addEventListener('visibilitychange', () => { if (S.running && document.visibilityState === 'visible') keepAwake(); });
 async function selectFile(file) {
   if (S.running) { if (!confirm('目前正在處理，要改處理新檔案嗎？（目前進度已自動保存）')) return; S.stop = true; while (S.running) await sleep(200); }
-  readMode();
-  Object.assign(S, { file, key: `${file.name}|${file.size}|${file.lastModified}|${S.mode}`, duration: 0, processed: 0, wins: [], online: null, liveT: [], liveL: [], final: null, utts: [], tr: {}, stop: false, playable: false, listenBuilt: 0, srcKind: '', stats: { recheck: 0, removed: 0, prompted: 0, aiFixed: 0, aiRejected: 0 }, spkLang: {}, langRun: 0, detCache: new Map(), llm: {} });
+  Object.assign(S, { file, key: `${file.name}|${file.size}|${file.lastModified}`, duration: 0, processed: 0, wins: [], online: null, liveT: [], liveL: [], final: null, utts: [], tr: {}, stop: false, playable: false, listenBuilt: 0, srcKind: '', stats: { recheck: 0, removed: 0, prompted: 0, aiFixed: 0, aiRejected: 0, retried: 0 }, spkLang: {}, langRun: 0, detCache: new Map(), llm: {} });
+  window.__AVTX.done = false; window.__AVTX.error = null;
   $('fname').textContent = `${file.name}（${file.size >= 1073741824 ? (file.size / 1073741824).toFixed(2) + ' GB' : (file.size / 1048576).toFixed(1) + ' MB'}）`;
-  if (!$('tplName').textContent) $('tplName').textContent = '';
   $('tx').innerHTML = '<div class="empty">逐字稿會在這裡逐段出現</div>'; ['bTxt', 'bSrt', 'bDoc'].forEach(i => $(i).disabled = true);
   setPlayer(null); ring(0, '準備中');
   run();
@@ -2813,7 +2695,6 @@ async function run() {
     stage(src.kind === 'ffmpeg' ? '轉檔並辨識中' : '辨識中', ''); progress();
     let pend = new Float32Array(0), pStart = fromSec, first = true;
     const cat = (a, b) => { const c = new Float32Array(a.length + b.length); c.set(a); c.set(b, a.length); return c; };
-    // 第一階段（辨識）最多同時 K 段在不同引擎上跑；第二階段依時間順序提交
     const inflight = []; let wIdx = S.wins.length;
     const commitOne = async () => { const x = inflight.shift(); await phase2(await x); };
     const drain = async final => {
@@ -2851,7 +2732,7 @@ async function run() {
     ring(100, '完成');
     stage('完成', `共 ${sp.length} 句、${S.final.K} 位講者${nfix ? `；依會議資料校正 ${nfix} 句` : ''}${nai ? `；AI 整句校正 ${nai} 句` : ''}${gaps.length ? `；${gaps.length} 段需人工確認（紅底）` : ''}`);
     ['bTxt', 'bSrt', 'bDoc'].forEach(i => $(i).disabled = false);
-    window.__AVTX.done = true; offlineStatus();
+    window.__AVTX.done = true;
   } catch (e) {
     dbg('中斷', e); window.__AVTX.error = String(e && e.message || e);
     if (e && e.unreadable) { stage(e.net ? '無法載入 AI 辨識元件' : '無法處理此檔案', e.message); ring(0, '—'); }
@@ -2859,7 +2740,6 @@ async function run() {
     if (S.utts.some(u => u.kind === 'speech')) ['bTxt', 'bSrt', 'bDoc'].forEach(i => $(i).disabled = false);
   } finally { S.running = false; try { wakeLock && wakeLock.release(); } catch { } }
 }
-
 /* ---------- 呈現 ---------- */
 const spkName = k => k < 0 ? '講者 ?' : '講者 ' + letter(k);
 const flagsOf = u => [...(u.flags || [])].map(f => LOGIC.FLAG_TEXT[f]).filter(Boolean);
@@ -2869,7 +2749,7 @@ function markFixes(text, fixes) {
   for (const [from, to] of fixes || []) { const t = esc(to); h = h.split(t).join(`\u0001${t}\u0002${esc(from)}\u0003`); }
   return h.replace(/\u0001([^\u0002]*)\u0002([^\u0003]*)\u0003/g, (m, t, f) => `<mark class="fx" title="原辨識：${f}（依會議資料校正）">${t}</mark>`);
 }
-function rowHtml(u, i) {
+function rowHtml(u) {
   const ts = `<a class="ts" data-s="${u.s}">[${fmt(u.s)}]</a>`;
   if (u.kind !== 'speech') return `<div class="u gap">${ts}【${fmt(u.s)}–${fmt(u.e)} ${u.kind === 'fail' ? '此段聲音無法解碼' : '有聲音但未辨識出文字'}，請播放確認】</div>`;
   const fl = flagsOf(u);
@@ -2888,7 +2768,6 @@ $('tx').addEventListener('click', async e => {
   const go = () => { p.currentTime = Math.max(0, +a.dataset.s - 0.2); p.play().catch(() => { }); };
   if (p.readyState >= 1) go(); else p.addEventListener('loadedmetadata', go, { once: true });
 });
-
 /* ---------- 匯出 ---------- */
 function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000); }
 const base = () => S.file.name.replace(/\.[^.]+$/, '');
@@ -2916,7 +2795,6 @@ tdrop.onclick = () => $('tpl').click();
 ['dragenter', 'dragover'].forEach(t => tdrop.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); tdrop.classList.add('on'); }));
 ['dragleave', 'drop'].forEach(t => tdrop.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); tdrop.classList.remove('on'); }));
 tdrop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) loadTemplate(f); });
-// 檔案拖到其他位置時不讓瀏覽器直接開啟檔案
 ['dragover', 'drop'].forEach(t => window.addEventListener(t, e => { if (e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')) e.preventDefault(); }));
 $('bDoc').onclick = async () => {
   try {
@@ -2929,8 +2807,6 @@ $('bDoc').onclick = async () => {
     download(base() + '_會議記錄.docx', await DOCX.build(S.tplBuf ? S.tplBuf.slice(0) : null, v, DOMParser, XMLSerializer));
   } catch (e) { dbg('Word 失敗', e); alert('產出會議記錄失敗：' + e.message); }
 };
-
-
 /* ---------- 會議資料（輔助辨識用字） ---------- */
 const REF_EXT = /\.(pdf|pptx?|ppsx?|potx?|docx?|dotx?|odt|odp|ods|ott|rtf|txt|md|markdown|csv|tsv|xlsx?|xlsm|html?|xhtml|xml|json|srt|vtt|epub)$/i;
 const MEDIA_EXT = /\.(mp3|mp4|m4a|m4v|mkv|webm|wav|mov|avi|flv|wmv|asf|aac|flac|ogg|oga|opus|wma|amr|3gp|ts|mts|m2ts|mpg|mpeg|mxf|caf|aiff?)$/i;
@@ -2977,38 +2853,6 @@ $('rfile').onchange = e => { loadRefs(e.target.files); e.target.value = ''; };
 ['dragenter', 'dragover'].forEach(t => rdrop.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); rdrop.classList.add('on'); }));
 ['dragleave', 'drop'].forEach(t => rdrop.addEventListener(t, e => { e.preventDefault(); e.stopPropagation(); rdrop.classList.remove('on'); }));
 rdrop.addEventListener('drop', e => loadRefs(e.dataTransfer.files));
-
-/* ---------- 模式與離線準備 ---------- */
-function readMode() { S.mode = $('mPrecise').checked ? 'precise' : 'fast'; S.useLLM = $('mLLM').checked; try { localStorage.setItem('avtx-mode', JSON.stringify({ m: S.mode, l: S.useLLM })); } catch (e) { } }
-try { const m = JSON.parse(localStorage.getItem('avtx-mode') || 'null'); if (m) { $(m.m === 'precise' ? 'mPrecise' : 'mFast').checked = true; $('mLLM').checked = m.l !== false; } } catch (e) { }
-['mFast', 'mPrecise', 'mLLM'].forEach(id => $(id).addEventListener('change', () => { readMode(); modeNote(); }));
-function modeNote() {
-  $('mNote').textContent = S.mode === 'precise'
-    ? '精準：較大的辨識模型＋完整複核；AI 校正會處理每一句（速度約為高速模式的 1/3～1/2）。'
-    : '高速：較小的辨識模型＋精簡複核；AI 只校正有疑慮或與會議資料相關的句子。';
-}
-readMode(); modeNote();
-async function offlineStatus() {
-  const snap = await DB.get('libsnap|' + TF_VER), cm = await cachedModels();
-  const has = id => [...cm.set].some(x => x === id || x.startsWith(id));
-  const asrOK = has(ASR_IDS.BASE) || has(ASR_IDS.SMALL) || has(ASR_IDS.LARGE);
-  const llmOK = has(LLM_IDS.fast) || has(LLM_IDS.precise);
-  $('offState').textContent = `離線狀態：AI 程式 ${snap ? '✓' : '✗'}｜辨識模型 ${asrOK ? '✓' : '✗'}｜講者模型 ${has(SPK_MODEL) ? '✓' : '✗'}｜校正語言模型 ${llmOK ? '✓' : '✗'}`;
-  return snap && asrOK;
-}
-$('bOffline').onclick = async () => {
-  if (S.running) return alert('請等目前的轉錄完成後再執行。');
-  const b = $('bOffline'); b.disabled = true; readMode();
-  try {
-    stage('準備離線使用', '下載 AI 程式與模型到此瀏覽器（只需一次）…'); ring(0, '下載中');
-    await ensureModels(); await autoSnapshot(true);
-    if (S.useLLM) await ensureLLM();
-    await offlineStatus();
-    stage('離線準備完成', '之後即使網路封鎖 AI 下載網站，用同一瀏覽器、同一網址開啟本頁也能使用。'); ring(100, '完成');
-  } catch (e) { stage('離線準備失敗', e.message || String(e)); ring(0, '—'); dbg('離線準備', e); }
-  finally { b.disabled = false; }
-};
-offlineStatus();
 /* ---------- 上傳 ---------- */
 const drop = $('drop');
 drop.onclick = () => $('file').click();
