@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 逐字稿</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f8fafc;color:#1e293b;font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif}
+  main{max-width:1040px;margin:0 auto;padding:32px 16px 48px;display:grid;gap:20px}
+  header{text-align:center} header h1{margin:0;font-size:1.9rem;letter-spacing:-.01em;color:#0f172a} header p{margin:.35rem 0 0;color:#64748b;font-size:.9rem}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px}
+  .row{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+  .drop{border:2px dashed #cbd5e1;border-radius:18px;padding:30px 20px;text-align:center;cursor:pointer;background:#fff;transition:.2s}
+  .drop:hover,.drop.on{border-color:#14b8a6;background:#f0fdfa}
+  .drop svg{width:48px;height:48px;color:#14b8a6}
+  .drop b{display:block;margin-top:10px;font-size:1.05rem}
+  .muted{color:#64748b;font-size:.8rem} .name{color:#0f766e;font-size:.88rem;margin-top:10px;word-break:break-all}
+  .tpl{display:flex;flex-direction:column;justify-content:center}
+  .btn{border:0;border-radius:12px;padding:10px 16px;font-weight:600;font-size:.9rem;cursor:pointer;font-family:inherit;transition:.15s}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .dark{background:#0f172a;color:#fff} .dark:hover:not(:disabled){background:#334155}
+  .teal{background:#0d9488;color:#fff} .teal:hover:not(:disabled){background:#14b8a6}
+  .soft{background:#f1f5f9;color:#334155;display:inline-flex;align-items:center;gap:6px;margin-top:14px;align-self:flex-start} .soft:hover{background:#e2e8f0}
+  .prog{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
+  .ring{position:relative;width:210px;height:210px}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .ring .trk{stroke:#e2e8f0} .ring .bar{stroke:url(#g);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+  .ring .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .pct{font-size:2.6rem;font-weight:700;font-variant-numeric:tabular-nums;color:#0f172a}
+  .ring .eta{font-size:.78rem;color:#64748b;margin-top:2px;text-align:center;padding:0 18px}
+  #stage{font-size:1.15rem;font-weight:600;margin:0} #sub{margin:.4rem 0 0;color:#64748b;font-size:.88rem}
+  video{width:100%;max-height:230px;border-radius:12px;background:#000;margin-top:14px}
+  .hidden{display:none!important}
+  .bar2{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px} .bar2 h2{margin:0 auto 0 0;font-size:1.05rem}
+  #tx{height:520px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:12px;padding:4px 12px;font-size:15px}
+  #tx .u{padding:7px 2px;border-bottom:1px solid #f1f5f9;line-height:1.75}
+  #tx .ts{font-family:ui-monospace,Consolas,monospace;font-size:.8rem;color:#0d9488;text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-right:6px}
+  #tx .sp{font-weight:700;margin-right:4px} #tx .zh{color:#0369a1}
+  #tx .warn{background:#fffbeb} #tx .gap{background:#fef2f2;color:#b91c1c}
+  #tx .tag{font-size:.7rem;border-radius:5px;padding:0 6px;margin-left:6px;background:#fef3c7;color:#92400e}
+  #tx .empty{color:#94a3b8;text-align:center;padding:30px 0;font-size:.9rem}
+  .note{color:#94a3b8;font-size:.76rem;margin:.8rem 0 0}
+  @media(max-width:760px){.row,.prog{grid-template-columns:1fr}.ring{margin:0 auto}}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>AI 逐字稿</h1><p>免費・不需帳號・影音只在你的電腦處理，不會上傳</p></header>
+  <section class="row">
+    <div id="drop" class="drop">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      <b>拖曳或點選影音檔</b>
+      <div class="muted">MP3、MP4、MKV、M4A、WAV、MOV、AVI、FLV、WMV…｜支援 10GB、10 小時以上</div>
+      <div id="fname" class="name"></div>
+      <input id="file" type="file" class="hidden">
+    </div>
+    <div class="card tpl">
+      <b>會議記錄 Word 範本（選填）</b>
+      <div class="muted" style="margin-top:4px">上傳空白範本，完成後依範本產出會議記錄；未上傳則使用標準格式。</div>
+      <label class="btn soft">選擇 .docx<input id="tpl" type="file" accept=".docx" class="hidden"></label>
+      <div id="tplName" class="name"></div>
+    </div>
+  </section>
+  <section class="card prog">
+    <div class="ring">
+      <svg viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs>
+        <circle cx="100" cy="100" r="88" fill="none" stroke-width="12" class="trk"/>
+        <circle id="ring" cx="100" cy="100" r="88" fill="none" stroke-width="12" class="bar" stroke-dasharray="552.92" stroke-dashoffset="552.92"/></svg>
+      <div class="ctr"><span id="pct" class="pct">0%</span><span id="eta" class="eta">等待檔案</span></div>
+    </div>
+    <div>
+      <p id="stage">選擇影音檔後自動開始</p>
+      <p id="sub"></p>
+      <video id="player" controls preload="metadata" class="hidden"></video>
+    </div>
+  </section>
+  <section class="card">
+    <div class="bar2">
+      <h2>逐字稿</h2>
+      <button id="bTxt" class="btn dark" disabled>匯出逐字稿 (TXT)</button>
+      <button id="bSrt" class="btn dark" disabled>匯出字幕 (SRT)</button>
+      <button id="bDoc" class="btn teal" disabled>下載會議記錄 (.docx)</button>
+    </div>
+    <div id="tx"><div class="empty">逐字稿會在這裡逐段出現</div></div>
+    <p class="note">點時間可跳到該處播放。黃底為系統偵測到需確認的句子；紅底為有聲音但未辨識出文字的片段，請以原音核對。外語括號內為機器翻譯。</p>
+  </section>
+</main>
+<script>
+/* ===== CORE：容器解析（MP4/MOV/M4A、MP3、AAC、WAV、MKV/WebM、AVI、FLV），以 File.slice() 分段讀取，不整檔載入 ===== */
+const CORE = (() => {
+  const td = new TextDecoder('latin1');
+  const str = (b, p, n) => td.decode(b.subarray(p, p + n));
+  const u16 = (b, p) => (b[p] << 8) | b[p + 1];
+  const u24 = (b, p) => (b[p] << 16) | (b[p + 1] << 8) | b[p + 2];
+  const u32 = (b, p) => ((b[p] << 24) >>> 0) + (b[p + 1] << 16) + (b[p + 2] << 8) + b[p + 3];
+  const u64 = (b, p) => u32(b, p) * 4294967296 + u32(b, p + 4);
+  const le16 = (b, p) => b[p] | (b[p + 1] << 8);
+  const le32 = (b, p) => (b[p] | (b[p + 1] << 8) | (b[p + 2] << 16)) + b[p + 3] * 16777216;
+  const le64 = (b, p) => le32(b, p) + le32(b, p + 4) * 4294967296;
+
+  async function readBytes(file, start, end) {
+    end = Math.min(end, file.size);
+    if (end <= start) return new Uint8Array(0);
+    return new Uint8Array(await file.slice(start, end).arrayBuffer());
+  }
+  /* 有快取視窗的讀取器（回傳的 subarray 只在下一次讀取前有效；要保存請 slice） */
+  class Reader {
+    constructor(file, win = 8 << 20) { this.f = file; this.win = win; this.s = 0; this.b = new Uint8Array(0); }
+    get size() { return this.f.size; }
+    async bytes(pos, n) {
+      if (pos >= this.s && pos + n <= this.s + this.b.length) return this.b.subarray(pos - this.s, pos - this.s + n);
+      this.b = await readBytes(this.f, pos, pos + Math.max(this.win, n)); this.s = pos;
+      return this.b.subarray(0, Math.min(n, this.b.length));
+    }
+  }
+
+  /* ---------- 共用：AAC / MP3 ---------- */
+  const SR_TABLE = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+  function parseASC(asc) {
+    let bit = 0;
+    const rd = n => { let v = 0; for (let i = 0; i < n; i++) { v = (v << 1) | ((asc[bit >> 3] >> (7 - (bit & 7))) & 1); bit++; } return v; };
+    let aot = rd(5); if (aot === 31) aot = 32 + rd(6);
+    let sfi = rd(4); const freq = sfi === 15 ? rd(24) : SR_TABLE[sfi];
+    const chan = rd(4); let core = aot;
+    if (aot === 5 || aot === 29) { const es = rd(4); if (es === 15) rd(24); core = rd(5); if (core === 31) core = 32 + rd(6); }
+    return { aot, coreAot: core, sfi, freq, chan };
+  }
+  function makeASC(sr, ch) {
+    let sfi = SR_TABLE.indexOf(sr); if (sfi < 0) sfi = 4;
+    return new Uint8Array([(2 << 3) | (sfi >> 1), ((sfi & 1) << 7) | ((ch & 15) << 3)]);
+  }
+  function aacTrack(asc) {
+    const a = parseASC(asc);
+    if (a.coreAot < 1 || a.coreAot > 4 || a.sfi === 15 || !a.freq) throw new Error('不支援的 AAC 設定');
+    return { codec: 'aac', asc, sr: a.freq, ch: a.chan || 2, frameDur: 1024 / a.freq, aot: a.aot, coreAot: a.coreAot, sfi: a.sfi, chanCfg: a.chan || 2 };
+  }
+  const BR = {
+    0: [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448], 1: [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384],
+    2: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320], 3: [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256],
+    4: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]
+  };
+  const MP3_SR = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+  /* MPEG 音訊（Layer I/II/III）或 ADTS 音框標頭 */
+  function frameHeader(b, p) {
+    if (p + 7 > b.length || b[p] !== 0xff || (b[p + 1] & 0xe0) !== 0xe0) return null;
+    const b1 = b[p + 1], b2 = b[p + 2], layer = (b1 >> 1) & 3;
+    if (layer === 0) {
+      if ((b1 & 0xf6) !== 0xf0) return null;
+      const sfi = (b2 >> 2) & 15; if (sfi > 12) return null;
+      const len = ((b[p + 3] & 3) << 11) | (b[p + 4] << 3) | (b[p + 5] >> 5); if (len < 7) return null;
+      const prot = !(b1 & 1);
+      return { type: 'aac', len, hdr: prot ? 9 : 7, samples: 1024 * ((b[p + 6] & 3) + 1), sr: SR_TABLE[sfi], profile: ((b2 >> 6) & 3) + 1, sfi, ch: ((b2 & 1) << 2) | (b[p + 3] >> 6) };
+    }
+    const ver = (b1 >> 3) & 3; if (ver === 1) return null;
+    const bri = b2 >> 4, sri = (b2 >> 2) & 3, pad = (b2 >> 1) & 1;
+    if (bri === 0 || bri === 15 || sri === 3) return null;
+    const L = 4 - layer, tbl = ver === 3 ? (L === 1 ? 0 : L === 2 ? 1 : 2) : (L === 1 ? 3 : 4);
+    const br = BR[tbl][bri] * 1000, sr = MP3_SR[ver][sri], ch = ((b[p + 3] >> 6) === 3) ? 1 : 2;
+    if (L === 1) return { type: 'mp3', len: (Math.floor(12 * br / sr) + pad) * 4, samples: 384, sr, ch, layer: L };
+    if (L === 3 && ver !== 3) return { type: 'mp3', len: Math.floor(72 * br / sr) + pad, samples: 576, sr, ch, layer: L };
+    return { type: 'mp3', len: Math.floor(144 * br / sr) + pad, samples: 1152, sr, ch, layer: L };
+  }
+  const isInfoFrame = (b, p, len) => { const s = td.decode(b.subarray(p + 4, p + Math.min(len, 60))); return /Xing|Info|VBRI/.test(s); };
+  /* 把任意切割的 MP3 位元流重新切成完整音框 */
+  class MP3Framer {
+    constructor() { this.buf = new Uint8Array(0); this.t = 0; this.sr = 0; }
+    push(bytes, t) {
+      if (this.t === 0 && t != null && this.n == null) this.t = t;
+      const b = new Uint8Array(this.buf.length + bytes.length); b.set(this.buf); b.set(bytes, this.buf.length);
+      const out = []; let p = 0;
+      while (p + 4 <= b.length) {
+        const h = frameHeader(b, p);
+        if (!h || h.type !== 'mp3') { p++; continue; }
+        if (p + h.len > b.length) break;
+        const nx = p + h.len;
+        if (nx + 4 <= b.length) { const h2 = frameHeader(b, nx); if (!h2 || h2.type !== 'mp3') { p++; continue; } }
+        if (!this.n && isInfoFrame(b, p, h.len)) { this.n = 1; p = nx; continue; }
+        out.push({ t: this.t, d: h.samples / h.sr, data: b.slice(p, nx) });
+        this.t += h.samples / h.sr; this.sr = h.sr; this.n = (this.n || 0) + 1; p = nx;
+      }
+      this.buf = b.slice(p);
+      return out;
+    }
+  }
+
+  /* ---------- MP4 / MOV / M4A ---------- */
+  function* children(b, start, end) {
+    let p = start;
+    while (p + 8 <= end) {
+      let size = u32(b, p); const type = str(b, p + 4, 4); let hdr = 8;
+      if (size === 1) { size = u64(b, p + 8); hdr = 16; } else if (size === 0) size = end - p;
+      if (size < hdr || p + size > end) break;
+      yield { type, start: p + hdr, end: p + size };
+      p += size;
+    }
+  }
+  const child = (b, box, type) => { for (const c of children(b, box.start, box.end)) if (c.type === type) return c; return null; };
+  function readDesc(b, p) { const tag = b[p++]; let len = 0; for (let i = 0; i < 4; i++) { const x = b[p++]; len = (len << 7) | (x & 0x7f); if (!(x & 0x80)) break; } return { tag, len, p }; }
+  function parseEsds(b, p, end) {
+    p += 4; let d = readDesc(b, p); if (d.tag !== 0x03) return null;
+    p = d.p + 2; const fl = b[p++]; if (fl & 0x80) p += 2; if (fl & 0x40) p += 1 + b[p]; if (fl & 0x20) p += 2;
+    d = readDesc(b, p); if (d.tag !== 0x04) return null;
+    const oti = b[d.p]; p = d.p + 13;
+    while (p < end) { d = readDesc(b, p); if (d.tag === 0x05) return { oti, asc: b.slice(d.p, d.p + d.len) }; p = d.p + d.len; }
+    return { oti, asc: null };
+  }
+  class MP4Demux {
+    constructor(file) { this.file = file; this.name = 'MP4/MOV'; }
+    async open() {
+      const f = this.file; let pos = 0, moov = null; this.moofs = [];
+      while (pos + 8 <= f.size) {
+        const h = await readBytes(f, pos, pos + 16);
+        let size = u32(h, 0); const type = str(h, 4, 4);
+        if (size === 1) size = u64(h, 8); else if (size === 0) size = f.size - pos;
+        if (size < 8) break;
+        if (type === 'moov') moov = await readBytes(f, pos, pos + size);
+        else if (type === 'moof') this.moofs.push([pos, size]);
+        pos += size;
+      }
+      if (!moov) throw new Error('找不到 moov');
+      const b = moov; let mdia = null, tkhdId = 0;
+      for (const trak of children(b, 8, b.length)) {
+        if (trak.type !== 'trak') continue;
+        const m = child(b, trak, 'mdia'); if (!m) continue;
+        const hd = child(b, m, 'hdlr'); if (!hd || str(b, hd.start + 8, 4) !== 'soun') continue;
+        const tk = child(b, trak, 'tkhd'); if (tk) tkhdId = b[tk.start] === 1 ? u32(b, tk.start + 20) : u32(b, tk.start + 12);
+        mdia = m; break;
+      }
+      if (!mdia) throw new Error('沒有音軌');
+      const mdhd = child(b, mdia, 'mdhd'); const ts = b[mdhd.start] === 1 ? u32(b, mdhd.start + 20) : u32(b, mdhd.start + 12);
+      const stbl = child(b, child(b, mdia, 'minf'), 'stbl');
+      const stsd = child(b, stbl, 'stsd'); const ent = stsd.start + 8, entSize = u32(b, ent), fmt = str(b, ent + 4, 4);
+      const ver = u16(b, ent + 16), ch0 = u16(b, ent + 24), bits0 = u16(b, ent + 26), sr0 = u32(b, ent + 32) / 65536;
+      let track = null;
+      if (fmt === 'mp4a') {
+        let esds = null;
+        for (let p = ent + 28; p < ent + entSize - 4; p++) if (b[p] === 0x65 && str(b, p, 4) === 'esds') { esds = parseEsds(b, p + 4, p - 4 + u32(b, p - 4)); break; }
+        if (esds && (esds.oti === 0x69 || esds.oti === 0x6b)) track = { codec: 'mp3', sr: sr0 || ts, ch: ch0 || 2 };
+        else if (esds && esds.asc && (esds.oti === 0x40 || (esds.oti >= 0x66 && esds.oti <= 0x68))) track = aacTrack(esds.asc);
+        else if (!esds && ver < 2) track = aacTrack(makeASC(sr0 || ts, ch0 || 2));
+        else throw new Error('不支援的 mp4a 編碼');
+      } else if (fmt === '.mp3' || fmt === 'ms\u0000U') track = { codec: 'mp3', sr: sr0 || ts, ch: ch0 || 2 };
+      else if (['sowt', 'twos', 'lpcm', 'in24', 'in32', 'fl32', 'fl64', 'raw ', 'NONE'].includes(fmt)) {
+        let bits = bits0, ch = ch0, sr = sr0 || ts, le = fmt === 'sowt' || fmt === 'raw ', flt = false, sgn = fmt !== 'raw ';
+        if (fmt === 'in24') bits = 24; if (fmt === 'in32') bits = 32; if (fmt === 'fl32') { bits = 32; flt = true; } if (fmt === 'fl64') { bits = 64; flt = true; } if (fmt === 'raw ') bits = 8;
+        if (ver === 2) { sr = (() => { const dv = new DataView(b.buffer, b.byteOffset + ent + 40, 8); return dv.getFloat64(0); })(); ch = u32(b, ent + 48); bits = u32(b, ent + 56); const fl = u32(b, ent + 60); flt = !!(fl & 1); le = !(fl & 2); sgn = !!(fl & 4) || flt; }
+        if (fmt === 'in24' || fmt === 'in32' || fmt === 'fl32' || fmt === 'fl64') {
+          for (let p = ent + 36; p < ent + entSize - 8; p++) if (str(b, p, 4) === 'enda') { le = u16(b, p + 4) === 1; break; }
+        }
+        track = { codec: 'pcm', sr, ch: ch || 1, bits, flt, le, sgn, bpf: (ch || 1) * bits / 8 };
+      } else throw new Error('不支援的音訊編碼 ' + fmt);
+      this.track = track; this.ts = ts;
+      // 樣本表
+      const stsz = child(b, stbl, 'stsz'); const fixed = u32(b, stsz.start + 4), N = u32(b, stsz.start + 8);
+      this.frag = N === 0 && this.moofs.length > 0; this.trackId = tkhdId;
+      if (!this.frag) {
+        if (!N) throw new Error('音軌無樣本');
+        const sizes = new Uint32Array(N); for (let i = 0; i < N; i++) sizes[i] = fixed || u32(b, stsz.start + 12 + i * 4);
+        let co = child(b, stbl, 'stco'), is64 = false; if (!co) { co = child(b, stbl, 'co64'); is64 = true; }
+        const nc = u32(b, co.start + 4), chunkOff = new Float64Array(nc);
+        for (let i = 0; i < nc; i++) chunkOff[i] = is64 ? u64(b, co.start + 8 + i * 8) : u32(b, co.start + 8 + i * 4);
+        const stsc = child(b, stbl, 'stsc'), ns = u32(b, stsc.start + 4), sc = [];
+        for (let i = 0; i < ns; i++) { const q = stsc.start + 8 + i * 12; sc.push([u32(b, q), u32(b, q + 4)]); }
+        const stts = child(b, stbl, 'stts'), nt = u32(b, stts.start + 4), times = new Float64Array(N + 1); let t = 0, idx = 0;
+        for (let i = 0; i < nt; i++) { const q = stts.start + 8 + i * 8, cnt = u32(b, q), d = u32(b, q + 4); for (let k = 0; k < cnt && idx < N; k++) { times[idx++] = t / ts; t += d; } }
+        while (idx < N) { times[idx++] = t / ts; t += track.codec === 'pcm' ? 1 : 1024; }
+        times[N] = t / ts;
+        if (track.codec === 'pcm') {
+          // PCM：以 chunk 為封包（樣本＝音框）
+          const pk = []; let si = 0;
+          for (let c = 0; c < nc && si < N; c++) {
+            let spc = 0; for (let k = sc.length - 1; k >= 0; k--) if (sc[k][0] <= c + 1) { spc = sc[k][1]; break; }
+            const n = Math.min(spc, N - si);
+            const bytesPer = (fixed > 1 && fixed !== track.bpf) ? fixed : track.bpf;
+            pk.push([chunkOff[c], n * bytesPer, times[si], n / track.sr]); si += n;
+          }
+          this.pk = pk;
+        } else {
+          const offs = new Float64Array(N); let si = 0;
+          for (let c = 0; c < nc && si < N; c++) {
+            let spc = 0; for (let k = sc.length - 1; k >= 0; k--) if (sc[k][0] <= c + 1) { spc = sc[k][1]; break; }
+            let o = chunkOff[c]; for (let k = 0; k < spc && si < N; k++) { offs[si] = o; o += sizes[si]; si++; }
+          }
+          this.N = N; this.sizes = sizes; this.offs = offs; this.times = times;
+        }
+        this.duration = times[N];
+      } else {
+        const mvhdDur = (() => { const mvhd = child(b, { start: 8, end: b.length }, 'mvhd'); if (!mvhd) return 0; const v = b[mvhd.start]; const tsc = v === 1 ? u32(b, mvhd.start + 20) : u32(b, mvhd.start + 12); const du = v === 1 ? u64(b, mvhd.start + 24) : u32(b, mvhd.start + 16); return tsc ? du / tsc : 0; })();
+        this.duration = mvhdDur;
+      }
+      return { duration: this.duration, track };
+    }
+    async *packets(fromSec = 0) {
+      const tr = this.track;
+      if (this.pk) {
+        for (const [o, n, t, d] of this.pk) { if (t + d < fromSec - 2) continue; yield { t, d, data: await readBytes(this.file, o, o + n) }; }
+        return;
+      }
+      if (this.frag) { yield* this.fragPackets(fromSec); return; }
+      const { N, sizes, offs, times } = this;
+      let lo = 0, hi = N - 1; const want = Math.max(0, fromSec - 2);
+      while (lo < hi) { const m = (lo + hi + 1) >> 1; if (times[m] <= want) lo = m; else hi = m - 1; }
+      let i = want <= 0 ? 0 : lo;
+      const rd = new Reader(this.file, 4 << 20);
+      for (; i < N; i++) { const d = await rd.bytes(offs[i], sizes[i]); yield { t: times[i], d: times[i + 1] - times[i], data: d.slice() }; }
+    }
+    async *fragPackets(fromSec) {
+      const f = this.file, tr = this.track;
+      for (const [pos, size] of this.moofs) {
+        const b = await readBytes(f, pos, pos + size);
+        for (const traf of children(b, 8, b.length)) {
+          if (traf.type !== 'traf') continue;
+          const tfhd = child(b, traf, 'tfhd'); if (!tfhd) continue;
+          const fl = u24(b, tfhd.start + 1), id = u32(b, tfhd.start + 4);
+          if (this.trackId && id !== this.trackId) continue;
+          let q = tfhd.start + 8, base = pos, defDur = 0, defSize = 0;
+          if (fl & 1) { base = u64(b, q); q += 8; } if (fl & 2) q += 4; if (fl & 8) { defDur = u32(b, q); q += 4; } if (fl & 0x10) { defSize = u32(b, q); q += 4; }
+          const tfdt = child(b, traf, 'tfdt'); let dt = 0; if (tfdt) dt = b[tfdt.start] === 1 ? u64(b, tfdt.start + 4) : u32(b, tfdt.start + 4);
+          for (const trun of children(b, traf.start, traf.end)) {
+            if (trun.type !== 'trun') continue;
+            const tf = u24(b, trun.start + 1), cnt = u32(b, trun.start + 4); let p = trun.start + 8, dataOff = base;
+            if (tf & 1) { dataOff = base + (u32(b, p) | 0); p += 4; } if (tf & 4) p += 4;
+            for (let s = 0; s < cnt; s++) {
+              let dur = defDur, sz = defSize;
+              if (tf & 0x100) { dur = u32(b, p); p += 4; } if (tf & 0x200) { sz = u32(b, p); p += 4; } if (tf & 0x400) p += 4; if (tf & 0x800) p += 4;
+              const t = dt / this.ts; const d = (dur || 1024) / this.ts;
+              if (t + d >= fromSec - 2) {
+                const data = await readBytes(f, dataOff, dataOff + sz);
+                if (tr.codec === 'pcm') yield { t, d: data.length / tr.bpf / tr.sr, data }; else yield { t, d, data };
+              }
+              dataOff += sz; dt += dur || 1024;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* ---------- MP3 / ADTS AAC 純音訊流 ---------- */
+  class ESDemux {
+    constructor(file) { this.file = file; }
+    async open() {
+      const f = this.file, h = await readBytes(f, 0, 10); let p = 0;
+      if (str(h, 0, 3) === 'ID3') p = 10 + ((h[6] & 127) << 21 | (h[7] & 127) << 14 | (h[8] & 127) << 7 | (h[9] & 127)) + ((h[5] & 0x10) ? 10 : 0);
+      this.rd = new Reader(f, 4 << 20);
+      p = await this.sync(p); if (p < 0) throw new Error('找不到有效音框');
+      const fh = frameHeader(await this.rd.bytes(p, 16), 0);
+      this.first = p; this.type = fh.type; this.name = fh.type === 'mp3' ? 'MP3' : 'AAC';
+      this.track = fh.type === 'mp3' ? { codec: 'mp3', sr: fh.sr, ch: fh.ch } : Object.assign(aacTrack(makeASC(fh.sr, fh.ch || 2)), { adts: true });
+      let q = p, n = 0, sec = 0;
+      while (n < 400 && q < f.size) { const x = frameHeader(await this.rd.bytes(q, 16), 0); if (!x) break; q += x.len; sec += x.samples / x.sr; n++; }
+      this.duration = sec > 0 ? (f.size - p) / ((q - p) / sec) : 0;
+      return { duration: this.duration, track: this.track, estimated: true };
+    }
+    async sync(p, limit = 4 << 20) {
+      const end = Math.min(this.file.size, p + limit);
+      for (; p < end; p++) {
+        const a = frameHeader(await this.rd.bytes(p, 16), 0);
+        if (a && a.len > 0) { if (p + a.len >= this.file.size) return p; const b2 = frameHeader(await this.rd.bytes(p + a.len, 16), 0); if (b2 && b2.type === a.type) return p; }
+      }
+      return -1;
+    }
+    async *packets(fromSec = 0) {
+      const size = this.file.size; let p = this.first, t = 0;
+      while (p < size) {
+        const hb = await this.rd.bytes(p, 16); const x = frameHeader(hb, 0);
+        if (!x || p + x.len > size) { const r = await this.sync(p + 1); if (r < 0) return; p = r; continue; }
+        const d = x.samples / x.sr;
+        if (p === this.first && x.type === 'mp3' && isInfoFrame(await this.rd.bytes(p, x.len), 0, x.len)) { p += x.len; continue; }
+        if (t + d >= fromSec - 2) {
+          const data = (await this.rd.bytes(p, x.len)).slice();
+          yield { t, d, data: x.type === 'aac' ? data.subarray(x.hdr) : data };
+        }
+        p += x.len; t += d;
+      }
+    }
+  }
+
+  /* ---------- WAV / RF64 ---------- */
+  class WavDemux {
+    constructor(file) { this.file = file; this.name = 'WAV'; }
+    async open() {
+      const f = this.file, h = await readBytes(f, 0, 12); const rf64 = str(h, 0, 4) === 'RF64';
+      let pos = 12, fmt = null, ds64 = null;
+      while (pos + 8 <= f.size) {
+        const c = await readBytes(f, pos, pos + 8); const id = str(c, 0, 4); let size = le32(c, 4);
+        if (id === 'ds64') { const d = await readBytes(f, pos + 8, pos + 32); ds64 = le64(d, 8); }
+        else if (id === 'fmt ') {
+          const d = await readBytes(f, pos + 8, pos + 8 + Math.min(size, 40));
+          fmt = { tag: le16(d, 0), ch: le16(d, 2), sr: le32(d, 4), align: le16(d, 12), bits: le16(d, 14) };
+          if (fmt.tag === 0xfffe && size >= 26) fmt.tag = le16(d, 24);
+        } else if (id === 'data') {
+          this.dataOff = pos + 8; if (rf64 && ds64 != null) size = ds64;
+          if (size === 0 || size === 0xffffffff || this.dataOff + size > f.size) size = f.size - this.dataOff;
+          this.dataSize = size; break;
+        }
+        pos += 8 + size + (size & 1);
+      }
+      if (!fmt || this.dataOff == null) throw new Error('WAV 標頭不完整');
+      if (fmt.tag === 1 || fmt.tag === 3) this.track = { codec: 'pcm', sr: fmt.sr, ch: fmt.ch, bits: fmt.bits, flt: fmt.tag === 3, le: true, sgn: fmt.bits > 8, bpf: fmt.align };
+      else if (fmt.tag === 6 || fmt.tag === 7) this.track = { codec: 'pcm', sr: fmt.sr, ch: fmt.ch, bits: 8, law: fmt.tag === 6 ? 'a' : 'u', bpf: fmt.align };
+      else throw new Error('WAV 編碼不支援（' + fmt.tag + '）');
+      this.duration = Math.floor(this.dataSize / this.track.bpf) / fmt.sr;
+      return { duration: this.duration, track: this.track };
+    }
+    async *packets(fromSec = 0) {
+      const tr = this.track, per = Math.floor(tr.sr * 10) * tr.bpf, total = Math.floor(this.dataSize / tr.bpf) * tr.bpf;
+      for (let o = Math.max(0, Math.floor((fromSec - 2) * tr.sr)) * tr.bpf; o < total; o += per) {
+        const n = Math.min(per, total - o);
+        yield { t: o / tr.bpf / tr.sr, d: n / tr.bpf / tr.sr, data: await readBytes(this.file, this.dataOff + o, this.dataOff + o + n) };
+      }
+    }
+  }
+
+  /* ---------- Matroska / WebM ---------- */
+  function ebmlId(b, p) { const x = b[p]; let len = 1, m = 0x80; while (len <= 4 && !(x & m)) { len++; m >>= 1; } if (len > 4) return null; let v = 0; for (let i = 0; i < len; i++) v = v * 256 + b[p + i]; return { len, v }; }
+  function ebmlSize(b, p) { const x = b[p]; let len = 1, m = 0x80; while (len <= 8 && !(x & m)) { len++; m >>= 1; } if (len > 8) return null; let v = x & (m - 1), ones = v === m - 1; for (let i = 1; i < len; i++) { v = v * 256 + b[p + i]; if (b[p + i] !== 0xff) ones = false; } return { len, v, unknown: ones }; }
+  const uintB = (b, p, n) => { let v = 0; for (let i = 0; i < n; i++) v = v * 256 + b[p + i]; return v; };
+  const floatB = (b, p, n) => { const dv = new DataView(b.buffer, b.byteOffset + p, n); return n === 4 ? dv.getFloat32(0) : dv.getFloat64(0); };
+  const MKV_TOP = new Set([0x1F43B675, 0x1C53BB6B, 0x1254C367, 0x1941A469, 0x1043A770, 0x114D9B74, 0x1549A966, 0x1654AE6B]);
+  function opusDur(d) {
+    if (!d.length) return 0.02; const toc = d[0], cfg = toc >> 3; let fs;
+    if (cfg < 12) fs = [10, 20, 40, 60][cfg & 3]; else if (cfg < 16) fs = [10, 20][cfg & 1]; else fs = [2.5, 5, 10, 20][cfg & 3];
+    const c = toc & 3, n = c === 0 ? 1 : c === 3 ? (d[1] & 0x3f) : 2; return n * fs / 1000;
+  }
+  class MKVDemux {
+    constructor(file) { this.file = file; this.name = 'MKV/WebM'; }
+    async el(rd, pos) { const b = await rd.bytes(pos, 12); const id = ebmlId(b, 0); if (!id) return null; const sz = ebmlSize(b, id.len); if (!sz) return null; return { id: id.v, hdr: id.len + sz.len, size: sz.unknown ? -1 : sz.v, pos }; }
+    async open() {
+      const rd = new Reader(this.file, 1 << 20); this.rd = rd;
+      let e = await this.el(rd, 0); if (!e || e.id !== 0x1A45DFA3) throw new Error('不是 Matroska');
+      let pos = e.hdr + e.size;
+      e = await this.el(rd, pos); if (!e || e.id !== 0x18538067) throw new Error('找不到 Segment');
+      const segEnd = e.size < 0 ? this.file.size : Math.min(this.file.size, pos + e.hdr + e.size);
+      pos += e.hdr; this.scale = 1e6; let dur = 0, tracksBuf = null;
+      while (pos < segEnd) {
+        e = await this.el(rd, pos); if (!e) break;
+        if (e.id === 0x1F43B675) { this.firstCluster = pos; break; }
+        if (e.size < 0) throw new Error('無法解析的區段');
+        if (e.id === 0x1549A966 || e.id === 0x1654AE6B) {
+          const b = await readBytes(this.file, pos + e.hdr, pos + e.hdr + e.size);
+          if (e.id === 0x1549A966) {
+            for (let p = 0; p < b.length;) { const i = ebmlId(b, p), s = ebmlSize(b, p + i.len), d = p + i.len + s.len; if (i.v === 0x2AD7B1) this.scale = uintB(b, d, s.v); if (i.v === 0x4489) dur = floatB(b, d, s.v); p = d + s.v; }
+          } else tracksBuf = b;
+        }
+        pos += e.hdr + e.size;
+      }
+      if (!tracksBuf) throw new Error('找不到 Tracks');
+      this.duration = dur * this.scale / 1e9; this.segEnd = segEnd;
+      // 找第一個音軌
+      const parse = (b, s, e2, fn) => { for (let p = s; p < e2;) { const i = ebmlId(b, p), z = ebmlSize(b, p + i.len), d = p + i.len + z.len; fn(i.v, d, z.v); p = d + z.v; } };
+      let found = null;
+      parse(tracksBuf, 0, tracksBuf.length, (id, d, n) => {
+        if (id !== 0xAE || found) return;
+        const t = { strip: null };
+        parse(tracksBuf, d, d + n, (id2, d2, n2) => {
+          if (id2 === 0xD7) t.num = uintB(tracksBuf, d2, n2);
+          else if (id2 === 0x83) t.type = uintB(tracksBuf, d2, n2);
+          else if (id2 === 0x86) t.codec = str(tracksBuf, d2, n2).replace(/\0+$/, '');
+          else if (id2 === 0x63A2) t.priv = tracksBuf.slice(d2, d2 + n2);
+          else if (id2 === 0xE1) parse(tracksBuf, d2, d2 + n2, (id3, d3, n3) => { if (id3 === 0xB5) t.sr = floatB(tracksBuf, d3, n3); if (id3 === 0x9F) t.ch = uintB(tracksBuf, d3, n3); if (id3 === 0x6264) t.bits = uintB(tracksBuf, d3, n3); });
+          else if (id2 === 0x6D80) parse(tracksBuf, d2, d2 + n2, (a, da, na) => parse(tracksBuf, da, da + na, (b2, db, nb) => { if (b2 === 0x5034) parse(tracksBuf, db, db + nb, (c, dc, nc) => { if (c === 0x4254) t.alg = uintB(tracksBuf, dc, nc); if (c === 0x4255) t.strip = tracksBuf.slice(dc, dc + nc); }); }));
+        });
+        if (t.type === 2) found = t;
+      });
+      if (!found) throw new Error('沒有音軌');
+      if (found.alg != null && found.alg !== 3) throw new Error('音軌有壓縮編碼');
+      const c = found.codec || '', sr = found.sr || 48000, ch = found.ch || 2;
+      let track;
+      if (c.startsWith('A_AAC')) track = aacTrack(found.priv && found.priv.length >= 2 ? found.priv : makeASC(sr, ch));
+      else if (c === 'A_MPEG/L3' || c === 'A_MPEG/L2' || c === 'A_MPEG/L1') track = { codec: 'mp3', sr, ch, reframe: true };
+      else if (c === 'A_OPUS') track = { codec: 'opus', sr: 48000, ch, desc: found.priv };
+      else if (c === 'A_VORBIS') track = { codec: 'vorbis', sr, ch, desc: found.priv };
+      else if (c === 'A_FLAC') track = { codec: 'flac', sr, ch, desc: found.priv };
+      else if (c === 'A_PCM/INT/LIT' || c === 'A_PCM/INT/BIG' || c === 'A_PCM/FLOAT/IEEE') { const bits = found.bits || 16; track = { codec: 'pcm', sr, ch, bits, flt: c.includes('FLOAT'), le: !c.includes('BIG'), sgn: bits > 8, bpf: ch * bits / 8 }; }
+      else throw new Error('不支援的音訊編碼 ' + c);
+      this.track = track; this.tnum = found.num; this.strip = found.strip;
+      if (!this.duration) this.duration = 0;
+      return { duration: this.duration, track };
+    }
+    async *packets(fromSec = 0) {
+      const rd = new Reader(this.file, 8 << 20), tr = this.track, sc = this.scale / 1e9;
+      const framer = tr.reframe ? new MP3Framer() : null;
+      let pos = this.firstCluster, cTime = 0, lastT = 0;
+      const want = fromSec - 2;
+      const out = [];
+      const emit = (t, data) => {
+        if (this.strip) { const x = new Uint8Array(this.strip.length + data.length); x.set(this.strip); x.set(data, this.strip.length); data = x; }
+        if (framer) { for (const fr of framer.push(data, t)) out.push(fr); return; }
+        let d = 0;
+        if (tr.codec === 'aac') d = tr.frameDur; else if (tr.codec === 'opus') d = opusDur(data); else if (tr.codec === 'pcm') d = data.length / tr.bpf / tr.sr;
+        out.push({ t, d, data });
+      };
+      while (pos < this.segEnd) {
+        const e = await this.el(rd, pos); if (!e) break;
+        if (e.id !== 0x1F43B675) { if (e.size < 0) break; pos += e.hdr + e.size; continue; }
+        const cEnd = e.size < 0 ? this.segEnd : pos + e.hdr + e.size;
+        let p = pos + e.hdr;
+        while (p < cEnd) {
+          const c = await this.el(rd, p); if (!c) { p = cEnd; break; }
+          if (e.size < 0 && MKV_TOP.has(c.id)) break;
+          if (c.size < 0) { p = cEnd; break; }
+          if (c.id === 0xE7) { const b = await rd.bytes(p + c.hdr, c.size); cTime = uintB(b, 0, c.size); }
+          else if (c.id === 0xA3 || c.id === 0xA0) {
+            let bp = p + c.hdr, bsz = c.size;
+            if (c.id === 0xA0) { // BlockGroup → Block
+              let q = bp; bp = -1;
+              while (q < p + c.hdr + c.size) { const g = await this.el(rd, q); if (!g || g.size < 0) break; if (g.id === 0xA1) { bp = q + g.hdr; bsz = g.size; break; } q += g.hdr + g.size; }
+            }
+            if (bp >= 0) {
+              const hb = await rd.bytes(bp, 12); const tn = ebmlSize(hb, 0);
+              if (tn && tn.v === this.tnum) {
+                const rel = ((hb[tn.len] << 8) | hb[tn.len + 1]) << 16 >> 16, flags = hb[tn.len + 2], t = (cTime + rel) * sc;
+                lastT = t;
+                if (t >= want) {
+                  const blk = (await rd.bytes(bp, bsz)).slice(); let q = tn.len + 3;
+                  const lacing = (flags >> 1) & 3;
+                  if (!lacing) emit(t, blk.subarray(q));
+                  else {
+                    const nf = blk[q++] + 1, sizes = [];
+                    if (lacing === 1) { for (let k = 0; k < nf - 1; k++) { let s = 0, x; do { x = blk[q++]; s += x; } while (x === 255); sizes.push(s); } }
+                    else if (lacing === 3) { const f0 = ebmlSize(blk, q); q += f0.len; sizes.push(f0.v); for (let k = 1; k < nf - 1; k++) { const z = ebmlSize(blk, q); const bias = Math.pow(2, 7 * z.len - 1) - 1; q += z.len; sizes.push(sizes[k - 1] + (z.v - bias)); } }
+                    else { const each = Math.floor((blk.length - q) / nf); for (let k = 0; k < nf - 1; k++) sizes.push(each); }
+                    sizes.push(blk.length - q - sizes.reduce((a, x) => a + x, 0));
+                    let tt = t;
+                    for (const s of sizes) { const fr = blk.subarray(q, q + s); q += s; emit(tt, fr); const lst = out[out.length - 1]; tt += lst && lst.d ? lst.d : 0; }
+                  }
+                }
+              }
+            }
+          }
+          p += c.hdr + c.size;
+          while (out.length) yield out.shift();
+        }
+        pos = p;
+      }
+      while (out.length) yield out.shift();
+      if (!this.duration) this.duration = lastT;
+    }
+  }
+
+  /* ---------- AVI（含 OpenDML > 1GB） ---------- */
+  class AVIDemux {
+    constructor(file) { this.file = file; this.name = 'AVI'; }
+    async open() {
+      const f = this.file; const rd = new Reader(f, 1 << 20);
+      this.movis = []; let hdrl = null, pos = 0;
+      while (pos + 12 <= f.size) {
+        const h = await rd.bytes(pos, 12); if (str(h, 0, 4) !== 'RIFF') break;
+        const size = le32(h, 4), end = Math.min(f.size, pos + 8 + size);
+        let p = pos + 12;
+        while (p + 8 <= end) {
+          const c = await rd.bytes(p, 12); const id = str(c, 0, 4), sz = le32(c, 4);
+          if (id === 'LIST') { const lt = str(c, 8, 4); if (lt === 'hdrl') hdrl = await readBytes(f, p + 12, p + 8 + sz); if (lt === 'movi') this.movis.push([p + 12, p + 8 + sz]); }
+          p += 8 + sz + (sz & 1);
+        }
+        pos = end + ((end - pos) & 1);
+        if (size === 0) break;
+      }
+      if (!hdrl || !this.movis.length) throw new Error('AVI 結構不完整');
+      let usPerFrame = 0, totalFrames = 0, idx = -1, sIdx = 0, ah = null, wf = null;
+      for (let p = 0; p + 8 <= hdrl.length;) {
+        const id = str(hdrl, p, 4), sz = le32(hdrl, p + 4);
+        if (id === 'avih') { usPerFrame = le32(hdrl, p + 8); totalFrames = le32(hdrl, p + 24); }
+        if (id === 'LIST' && str(hdrl, p + 8, 4) === 'strl') {
+          let sh = null, sf = null;
+          for (let q = p + 12; q + 8 <= p + 8 + sz;) { const i2 = str(hdrl, q, 4), s2 = le32(hdrl, q + 4); if (i2 === 'strh') sh = q + 8; if (i2 === 'strf') sf = [q + 8, s2]; q += 8 + s2 + (s2 & 1); }
+          if (sh != null && str(hdrl, sh, 4) === 'auds' && idx < 0) { idx = sIdx; ah = { scale: le32(hdrl, sh + 20), rate: le32(hdrl, sh + 24), length: le32(hdrl, sh + 32) }; wf = sf; }
+          sIdx++;
+        }
+        p += 8 + sz + (sz & 1);
+      }
+      if (idx < 0 || !wf) throw new Error('AVI 沒有音軌');
+      const w = hdrl, o = wf[0];
+      const tag = le16(w, o), ch = le16(w, o + 2), sr = le32(w, o + 4), align = le16(w, o + 12), bits = le16(w, o + 14), cb = wf[1] >= 18 ? le16(w, o + 16) : 0;
+      let realTag = tag; if (tag === 0xfffe && cb >= 22) realTag = le16(w, o + 24);
+      if (realTag === 1 || realTag === 3) this.track = { codec: 'pcm', sr, ch, bits, flt: realTag === 3, le: true, sgn: bits > 8, bpf: align || ch * bits / 8 };
+      else if (realTag === 6 || realTag === 7) this.track = { codec: 'pcm', sr, ch, bits: 8, law: realTag === 6 ? 'a' : 'u', bpf: align || ch };
+      else if (realTag === 0x55 || realTag === 0x50) this.track = { codec: 'mp3', sr, ch, reframe: true };
+      else if (realTag === 0xff || realTag === 0x1610 || realTag === 0x706d || realTag === 0x4143) this.track = aacTrack(cb >= 2 ? w.slice(o + 18, o + 18 + cb) : makeASC(sr, ch));
+      else throw new Error('AVI 音訊編碼不支援（0x' + realTag.toString(16) + '）');
+      this.aid = String(idx).padStart(2, '0') + 'wb';
+      const aDur = ah && ah.rate ? ah.length * ah.scale / ah.rate : 0;
+      this.duration = aDur > 0 ? aDur : totalFrames * usPerFrame / 1e6;
+      return { duration: this.duration, track: this.track };
+    }
+    async *packets(fromSec = 0) {
+      const rd = new Reader(this.file, 8 << 20), tr = this.track, want = fromSec - 2;
+      const framer = tr.reframe ? new MP3Framer() : null; let bytes = 0, cnt = 0;
+      for (const [s, e] of this.movis) {
+        let p = s;
+        while (p + 8 <= e) {
+          const h = await rd.bytes(p, 12); const id = str(h, 0, 4), sz = le32(h, 4);
+          if (id === 'LIST') { p += 12; continue; }
+          if (id === this.aid && sz > 0) {
+            if (framer) { const data = (await rd.bytes(p + 8, sz)).slice(); for (const fr of framer.push(data, 0)) if (fr.t + fr.d >= want) yield fr; }
+            else if (tr.codec === 'pcm') { const t = bytes / tr.bpf / tr.sr; bytes += sz; if (t + sz / tr.bpf / tr.sr >= want) yield { t, d: sz / tr.bpf / tr.sr, data: (await rd.bytes(p + 8, sz)).slice() }; }
+            else { const t = cnt * tr.frameDur; cnt++; if (t + tr.frameDur >= want) yield { t, d: tr.frameDur, data: (await rd.bytes(p + 8, sz)).slice() }; }
+          }
+          p += 8 + sz + (sz & 1);
+        }
+      }
+    }
+  }
+
+  /* ---------- FLV ---------- */
+  class FLVDemux {
+    constructor(file) { this.file = file; this.name = 'FLV'; }
+    async open() {
+      const f = this.file, h = await readBytes(f, 0, 13);
+      if (str(h, 0, 3) !== 'FLV') throw new Error('不是 FLV');
+      this.start = u32(h, 5) + 4;
+      const rd = new Reader(f, 1 << 20); let p = this.start, track = null, n = 0;
+      while (p + 11 <= f.size && n < 2000 && !track) {
+        const t = await rd.bytes(p, 16); const type = t[0] & 0x1f, size = u24(t, 1);
+        if (type === 8 && size > 0) {
+          const a = t[11], fmt = a >> 4, ch = (a & 1) ? 2 : 1, rates = [5512, 11025, 22050, 44100];
+          if (fmt === 10) { if (t[12] === 0) { const asc = (await rd.bytes(p + 13, size - 2)).slice(); track = aacTrack(asc); } }
+          else if (fmt === 2 || fmt === 14) track = { codec: 'mp3', sr: fmt === 14 ? 8000 : rates[(a >> 2) & 3], ch, reframe: true };
+          else if (fmt === 3 || fmt === 0) { const bits = (a & 2) ? 16 : 8; track = { codec: 'pcm', sr: rates[(a >> 2) & 3], ch, bits, flt: false, le: true, sgn: bits > 8, bpf: ch * bits / 8 }; }
+          else if (fmt === 7 || fmt === 8) track = { codec: 'pcm', sr: 8000, ch, bits: 8, law: fmt === 7 ? 'a' : 'u', bpf: ch };
+          else throw new Error('FLV 音訊編碼不支援（' + fmt + '）');
+        }
+        p += 11 + size + 4; n++;
+      }
+      if (!track) throw new Error('FLV 沒有可用音軌');
+      this.track = track; this.fmt = track.codec;
+      const tail = await readBytes(f, f.size - 4, f.size); const last = u32(tail, 0);
+      let dur = 0; if (last > 0 && last < f.size) { const lt = await readBytes(f, f.size - 4 - last, f.size - 4 - last + 8); dur = (u24(lt, 4) | (lt[7] << 24)) / 1000; }
+      this.duration = dur;
+      return { duration: dur, track };
+    }
+    async *packets(fromSec = 0) {
+      const f = this.file, rd = new Reader(f, 8 << 20), tr = this.track, want = fromSec - 2;
+      const framer = tr.reframe ? new MP3Framer() : null; let p = this.start, first = null;
+      while (p + 11 <= f.size) {
+        const t = await rd.bytes(p, 16); const type = t[0] & 0x1f, size = u24(t, 1), ts = (u24(t, 4) | (t[7] << 24)) / 1000;
+        if (p + 11 + size > f.size) break;
+        if (type === 8 && size > 1) {
+          if (tr.codec === 'aac') { if (t[12] === 1 && ts + tr.frameDur >= want) yield { t: ts, d: tr.frameDur, data: (await rd.bytes(p + 13, size - 2)).slice() }; }
+          else if (framer) { if (first == null) { first = ts; framer.t = ts; framer.n = 0; } const data = (await rd.bytes(p + 12, size - 1)).slice(); for (const fr of framer.push(data)) if (fr.t + fr.d >= want) yield fr; }
+          else { const d = (size - 1) / tr.bpf / tr.sr; if (ts + d >= want) yield { t: ts, d, data: (await rd.bytes(p + 12, size - 1)).slice() }; }
+        }
+        p += 11 + size + 4;
+      }
+    }
+  }
+
+  /* ---------- 判斷格式 ---------- */
+  async function demuxFor(file) {
+    const h = await readBytes(file, 0, 16);
+    const t4 = str(h, 4, 4), t0 = str(h, 0, 4);
+    if (['ftyp', 'moov', 'mdat', 'wide', 'free', 'skip', 'pnot'].includes(t4)) return new MP4Demux(file);
+    if ((t0 === 'RIFF' || t0 === 'RF64') && str(h, 8, 4) === 'WAVE') return new WavDemux(file);
+    if (t0 === 'RIFF' && str(h, 8, 4) === 'AVI ') return new AVIDemux(file);
+    if (h[0] === 0x1A && h[1] === 0x45 && h[2] === 0xDF && h[3] === 0xA3) return new MKVDemux(file);
+    if (str(h, 0, 3) === 'FLV') return new FLVDemux(file);
+    if (str(h, 0, 3) === 'ID3' || (h[0] === 0xff && (h[1] & 0xe0) === 0xe0)) return new ESDemux(file);
+    return null;
+  }
+  function findCut(pcm, sr, minSec, maxSec) {
+    const fr = Math.round(sr * 0.02), a = Math.floor(minSec * sr / fr), b = Math.min(Math.floor(maxSec * sr / fr), Math.floor(pcm.length / fr));
+    if (b <= a) return Math.min(pcm.length, Math.floor(maxSec * sr));
+    const e = new Float64Array(b - a);
+    for (let k = a; k < b; k++) { let s = 0; for (let i = k * fr; i < (k + 1) * fr; i++) s += pcm[i] * pcm[i]; e[k - a] = s; }
+    let best = 0, bv = Infinity;
+    for (let k = 0; k < e.length; k++) { let s = 0; for (let j = Math.max(0, k - 10); j <= Math.min(e.length - 1, k + 10); j++) s += e[j]; if (s < bv) { bv = s; best = k; } }
+    return (a + best) * fr + (fr >> 1);
+  }
+  return { demuxFor, readBytes, parseASC, frameHeader, findCut, MP3Framer };
+})();
+
+/* ===== DECODE：封包 → 16 kHz 單聲道 PCM（WebCodecs 優先，decodeAudioData 備援；PCM 直接換算） ===== */
+const DECODE = (() => {
+  const SR = 16000;
+  const MU = new Float32Array(256), AL = new Float32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let u = ~i & 0xff, s = u & 0x80, e = (u >> 4) & 7, m = u & 15, x = ((m << 3) + 0x84) << e; x -= 0x84; MU[i] = (s ? -x : x) / 32768;
+    let a = i ^ 0x55, sa = a & 0x80, ea = (a >> 4) & 7, ma = a & 15, y = ea === 0 ? (ma << 4) + 8 : ((ma << 4) + 0x108) << (ea - 1); AL[i] = (sa ? y : -y) / 32768;
+  }
+  function pcmToMono(tr, data) {
+    const ch = tr.ch, bps = tr.bits / 8, n = Math.floor(data.length / tr.bpf), out = new Float32Array(n);
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    for (let i = 0; i < n; i++) {
+      let s = 0;
+      for (let c = 0; c < ch; c++) {
+        const q = i * tr.bpf + c * bps; let x;
+        if (tr.law) x = (tr.law === 'u' ? MU : AL)[data[q]];
+        else if (tr.flt) x = bps === 4 ? dv.getFloat32(q, tr.le) : dv.getFloat64(q, tr.le);
+        else if (bps === 1) x = tr.sgn ? ((data[q] << 24) >> 24) / 128 : (data[q] - 128) / 128;
+        else if (bps === 2) x = dv.getInt16(q, tr.le) / 32768;
+        else if (bps === 3) { const b0 = data[q], b1 = data[q + 1], b2 = data[q + 2]; const v = tr.le ? (b2 << 16) | (b1 << 8) | b0 : (b0 << 16) | (b1 << 8) | b2; x = ((v << 8) >> 8) / 8388608; }
+        else x = dv.getInt32(q, tr.le) / 2147483648;
+        s += x;
+      }
+      out[i] = s / ch;
+    }
+    return out;
+  }
+  async function resample(pcm, sr) {
+    if (sr === SR || !pcm.length) return pcm;
+    const n = Math.max(1, Math.round(pcm.length * SR / sr));
+    const ctx = new OfflineAudioContext(1, n, SR), buf = ctx.createBuffer(1, pcm.length, sr); buf.copyToChannel(pcm, 0);
+    const s = ctx.createBufferSource(); s.buffer = buf; s.connect(ctx.destination); s.start();
+    return (await ctx.startRendering()).getChannelData(0);
+  }
+  function adts(tr, len) {
+    const L = len + 7, h = new Uint8Array(7), prof = (tr.coreAot || 2) - 1, sfi = tr.sfi, ch = tr.chanCfg || tr.ch || 2;
+    h[0] = 0xff; h[1] = 0xf1; h[2] = ((prof & 3) << 6) | ((sfi & 15) << 2) | ((ch >> 2) & 1);
+    h[3] = ((ch & 3) << 6) | ((L >> 11) & 3); h[4] = (L >> 3) & 0xff; h[5] = ((L & 7) << 5) | 0x1f; h[6] = 0xfc; return h;
+  }
+  function wcConfig(tr) {
+    if (tr.codec === 'aac') return { codec: 'mp4a.40.' + (tr.aot || 2), sampleRate: tr.sr, numberOfChannels: tr.ch || 2, description: tr.asc };
+    if (tr.codec === 'mp3') return { codec: 'mp3', sampleRate: tr.sr, numberOfChannels: tr.ch || 2 };
+    if (tr.codec === 'opus') { const c = { codec: 'opus', sampleRate: 48000, numberOfChannels: tr.ch || 2 }; if (tr.desc) c.description = tr.desc; return c; }
+    if (tr.codec === 'vorbis') return { codec: 'vorbis', sampleRate: tr.sr, numberOfChannels: tr.ch || 2, description: tr.desc };
+    if (tr.codec === 'flac') return { codec: 'flac', sampleRate: tr.sr, numberOfChannels: tr.ch || 2, description: tr.desc };
+    return null;
+  }
+  const wcOK = new Map();
+  async function canWC(tr) {
+    if (typeof AudioDecoder === 'undefined') return false;
+    const cfg = wcConfig(tr); if (!cfg) return false;
+    const k = JSON.stringify([cfg.codec, cfg.sampleRate, cfg.numberOfChannels]);
+    if (!wcOK.has(k)) { try { wcOK.set(k, (await AudioDecoder.isConfigSupported(cfg)).supported === true); } catch { wcOK.set(k, false); } }
+    return wcOK.get(k);
+  }
+  async function viaWC(tr, pk) {
+    const outs = []; let err = null;
+    const dec = new AudioDecoder({ output: a => outs.push(a), error: e => { err = e; } });
+    dec.configure(wcConfig(tr));
+    for (const p of pk) dec.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round(p.t * 1e6), duration: p.d ? Math.round(p.d * 1e6) : undefined, data: p.data }));
+    await dec.flush(); try { dec.close(); } catch { }
+    if (err) throw err;
+    if (!outs.length) throw new Error('解碼沒有輸出');
+    const sr = outs[0].sampleRate; let n = 0; for (const a of outs) n += a.numberOfFrames;
+    const mono = new Float32Array(n); let o = 0;
+    for (const a of outs) {
+      const ch = a.numberOfChannels, f = a.numberOfFrames, tmp = new Float32Array(f);
+      for (let c = 0; c < ch; c++) { a.copyTo(tmp, { planeIndex: c, format: 'f32-planar' }); for (let i = 0; i < f; i++) mono[o + i] += tmp[i] / ch; }
+      o += f; a.close();
+    }
+    return { sr, data: mono, t0: outs[0].timestamp / 1e6 };
+  }
+  async function viaDAD(tr, pk) {
+    if (tr.codec !== 'mp3' && tr.codec !== 'aac') throw new Error('此編碼需 WebCodecs');
+    let len = 0; for (const p of pk) len += p.data.length + (tr.codec === 'aac' ? 7 : 0);
+    const buf = new Uint8Array(len); let o = 0;
+    for (const p of pk) { if (tr.codec === 'aac') { buf.set(adts(tr, p.data.length), o); o += 7; } buf.set(p.data, o); o += p.data.length; }
+    const ab = await new OfflineAudioContext(1, 1, 44100).decodeAudioData(buf.buffer);
+    const n = ab.length, ch = ab.numberOfChannels; let mono;
+    if (ch === 1) mono = ab.getChannelData(0); else { mono = new Float32Array(n); for (let c = 0; c < ch; c++) { const d = ab.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / ch; } }
+    const last = pk[pk.length - 1], end = last.t + (last.d || 0);
+    return { sr: ab.sampleRate, data: mono, t0: end - n / ab.sampleRate };
+  }
+  /* 解出 [bs, be) 區間，pk 含前置封包 */
+  async function decodeBlock(tr, pk, bs, be) {
+    if (tr.codec === 'pcm') {
+      const n = Math.max(1, Math.round((be - bs) * tr.sr)), out = new Float32Array(n);
+      for (const p of pk) { const m = pcmToMono(tr, p.data), o = Math.round((p.t - bs) * tr.sr); for (let i = Math.max(0, -o); i < m.length && o + i < n; i++) out[o + i] = m[i]; }
+      return { pcm: await resample(out, tr.sr), cover: 1 };
+    }
+    let r = null, errs = [];
+    const order = tr.prefer === 'dad' ? ['dad', 'wc'] : ['wc', 'dad'];
+    for (const m of order) {
+      try {
+        if (m === 'wc') { if (!(await canWC(tr))) throw new Error('WebCodecs 不支援 ' + tr.codec); r = await viaWC(tr, pk); }
+        else r = await viaDAD(tr, pk);
+        tr.prefer = m; break;
+      } catch (e) { errs.push(m + ':' + (e && e.message || e)); r = null; }
+    }
+    if (!r) throw new Error('解碼失敗（' + errs.join('；') + '）');
+    const n = Math.max(1, Math.round((be - bs) * r.sr)), out = new Float32Array(n), off = Math.round((r.t0 - bs) * r.sr);
+    let covered = 0;
+    for (let i = Math.max(0, -off); i < r.data.length && off + i < n; i++) { out[off + i] = r.data[i]; covered++; }
+    return { pcm: await resample(out, r.sr), cover: covered / n };
+  }
+  /* 封包流 → 約 blockSec 秒的區塊 */
+  async function* blocks(demux, fromSec = 0, blockSec = 60, total = 0) {
+    const tr = demux.track, PRE = tr.codec === 'pcm' ? 0 : (tr.codec === 'opus' ? 6 : 4);
+    let hist = [], cur = [], bs = null, last = null;
+    const emit = async (be) => {
+      try { const r = await decodeBlock(tr, hist.concat(cur), bs, be); const pcm = r.pcm; if (r.cover < 0.9) pcm.failed = true; return { startSec: bs, endSec: be, pcm16: pcm }; }
+      catch (e) { console.warn('[解碼]', e); const z = new Float32Array(Math.max(1, Math.round((be - bs) * SR))); z.failed = true; return { startSec: bs, endSec: be, pcm16: z }; }
+    };
+    for await (const p of demux.packets(fromSec)) {
+      if (p.t + (p.d || 0) <= fromSec + 1e-6 && fromSec > 0) { hist.push(p); if (hist.length > PRE) hist.shift(); continue; }
+      if (bs === null) bs = p.t;
+      if (p.t - bs >= blockSec && cur.length) {
+        yield await emit(p.t);
+        hist = PRE ? cur.slice(-PRE) : []; cur = []; bs = p.t;
+      }
+      cur.push(p); last = p;
+    }
+    if (cur.length) {
+      let end = last.t + (last.d || 0);
+      if (!last.d) { const avg = cur.length > 1 ? (last.t - cur[0].t) / (cur.length - 1) : 0.02; end = last.t + avg; }
+      if (total && Math.abs(total - end) < 1) end = Math.max(end, Math.min(total, end + 0.5));
+      yield await emit(end);
+    }
+  }
+  /* 試解第一段，確認瀏覽器能解此編碼 */
+  async function probe(demux) {
+    const tr = demux.track; if (tr.codec === 'pcm') return true;
+    const pk = []; for await (const p of demux.packets(0)) { pk.push(p); if (pk.length >= 12) break; }
+    if (!pk.length) throw new Error('沒有音訊封包');
+    const be = pk[pk.length - 1].t + (pk[pk.length - 1].d || 0.02);
+    const r = await decodeBlock(tr, pk, pk[0].t, be);
+    if (r.cover < 0.5) throw new Error('試解輸出不足');
+    return true;
+  }
+  return { blocks, probe, resample, pcmToMono, SR };
+})();
+
+/* ===== LOGIC：VAD、幻覺檢查、講者分群、斷句 ===== */
+const LOGIC = (() => {
+  const FR = 320;
+  const fmt = sec => { sec = Math.max(0, Math.floor(sec)); const z = n => String(n).padStart(2, '0'); return `${z(Math.floor(sec / 3600))}:${z(Math.floor(sec % 3600 / 60))}:${z(sec % 60)}`; };
+  function frameDb(pcm) { const n = Math.floor(pcm.length / FR), db = new Float32Array(n); for (let k = 0; k < n; k++) { let s = 0; for (let i = k * FR; i < (k + 1) * FR; i++) s += pcm[i] * pcm[i]; db[k] = 10 * Math.log10(s / FR + 1e-12); } return db; }
+  function speechMask(db, absThr) {
+    let peak = -120; for (const v of db) if (v > peak) peak = v;
+    const thr = Math.max(absThr, peak - 35), m = new Uint8Array(db.length);
+    for (let k = 0; k < db.length; k++) m[k] = db[k] > thr ? 1 : 0;
+    const out = new Uint8Array(m);
+    for (let k = 0; k < m.length; k++) if (!m[k]) { let a = 0; for (let j = Math.max(0, k - 5); j <= Math.min(m.length - 1, k + 5); j++) a += m[j]; if (a >= 7) out[k] = 1; }
+    return out;
+  }
+  function maskIntervals(mask, off, minGap = 0.5) {
+    const iv = []; let s = -1;
+    for (let k = 0; k <= mask.length; k++) { const on = k < mask.length && mask[k]; if (on && s < 0) s = k; if (!on && s >= 0) { iv.push([off + s * 0.02, off + k * 0.02]); s = -1; } }
+    const out = []; for (const x of iv) { const L = out[out.length - 1]; if (L && x[0] - L[1] < minGap) L[1] = x[1]; else out.push(x.slice()); }
+    return out;
+  }
+  const speechSeconds = mask => { let n = 0; for (const v of mask) n += v; return n * 0.02; };
+  function speechFrac(mask, t0, t1, off) { const a = Math.max(0, Math.floor((t0 - off) / 0.02)), b = Math.min(mask.length, Math.ceil((t1 - off) / 0.02)); if (b <= a) return 0; let n = 0; for (let k = a; k < b; k++) n += mask[k]; return n / (b - a); }
+  const CJK = /[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]/;
+  function toWords(chunks, offset, dur) {
+    const words = [];
+    for (const c of chunks) {
+      const text = c.text || ''; if (!text.trim()) continue;
+      let [s, e] = c.ts || [0, dur];
+      s = Math.min(Math.max(0, s == null ? 0 : s), dur); e = (e == null || e > dur) ? dur : e; if (e < s) e = s;
+      const chars = [...text];
+      if (chars.filter(ch => CJK.test(ch)).length > 4 || chars.length > 25) {
+        const units = []; let buf = '';
+        for (const ch of chars) {
+          if (CJK.test(ch)) { if (buf.trim()) units.push(buf); buf = ''; units.push(ch); }
+          else if (/\s/.test(ch)) { if (buf.trim()) units.push(buf); buf = ch; }
+          else if (/[，。！？、,.!?;；:：]/.test(ch) && units.length) { if (buf.trim()) units.push(buf); buf = ''; units[units.length - 1] += ch; }
+          else buf += ch;
+        }
+        if (buf.trim()) units.push(buf);
+        const n = units.length, span = Math.max(e - s, 0.05 * n);
+        units.forEach((u, i) => words.push({ s: offset + s + span * i / n, e: offset + s + span * (i + 1) / n, t: u }));
+      } else words.push({ s: offset + s, e: offset + e, t: text });
+    }
+    return words;
+  }
+  const BOILER = ['amara.org', '字幕由', '字幕提供', '字幕製作', '字幕制作', '請不吝點贊', '请不吝点赞', '訂閱轉發', '订阅转发', '點點欄目', '点点栏目', '明鏡與', '明镜与', '感謝觀看', '感谢观看', '謝謝觀看', '谢谢观看', '謝謝收看', '谢谢收看', 'thank you for watching', 'thanks for watching', '中文字幕志愿者', '中文字幕志願者', 'ご視聴ありがとうございました', '시청해주셔서 감사합니다', '詞曲', '词曲'];
+  function wordsText(words) { let s = ''; const pos = []; for (const w of words) { pos.push([s.length, s.length + w.t.length]); s += w.t; } return { s, pos }; }
+  function markRange(words, pos, a, b, fn) { for (let i = 0; i < words.length; i++) if (pos[i][1] > a && pos[i][0] < b) fn(words[i], i); }
+  function checkWindow(words, mask, offset) {
+    const report = { flags: [], removed: 0 };
+    let { s, pos } = wordsText(words);
+    const low = s.toLowerCase(), kill = new Set();
+    for (const b of BOILER) { let i = low.indexOf(b); while (i >= 0) { markRange(words, pos, i, i + b.length, (w, k) => kill.add(k)); i = low.indexOf(b, i + 1); } }
+    if (kill.size) { report.removed++; words = words.filter((w, k) => !kill.has(k)); ({ s, pos } = wordsText(words)); }
+    const rep = /(.{2,20}?)\1{3,}/gs; let m; const drop = new Set();
+    while ((m = rep.exec(s))) { const unit = m[1].length; markRange(words, pos, m.index + unit * 2, m.index + m[0].length, (w, k) => drop.add(k)); markRange(words, pos, m.index, m.index + unit * 2, w => w.f = (w.f || '') + 'R'); report.flags.push('R'); }
+    if (drop.size) { report.removed++; words = words.filter((w, k) => !drop.has(k)); }
+    let run = [];
+    const flush = () => { if (run.length >= 3) { run.forEach(w => w.f = (w.f || '') + 'S'); report.flags.push('S'); } run = []; };
+    for (const w of words) { if (w.e - w.s >= 0.08 && speechFrac(mask, w.s, w.e, offset) < 0.05) run.push(w); else flush(); }
+    flush();
+    const sp = speechSeconds(mask), txt = words.map(w => w.t).join('');
+    const rate = ([...txt].filter(c => CJK.test(c)).length + (txt.match(/[A-Za-z\u00c0-\u024f]+/g) || []).length * 1.5) / Math.max(1, sp);
+    if (sp > 3 && rate > 10) { words.forEach(w => w.f = (w.f || '') + 'D'); report.flags.push('D'); }
+    const gaps = [];
+    for (const [a, b] of maskIntervals(mask, offset, 0.6)) {
+      let cur = a; const cov = words.filter(w => w.e > a - 0.4 && w.s < b + 0.4).sort((x, y) => x.s - y.s);
+      for (const w of cov) { if (w.s - 0.4 - cur >= 3) gaps.push([cur, w.s - 0.4]); cur = Math.max(cur, w.e + 0.4); }
+      if (b - cur >= 3) gaps.push([cur, b]);
+    }
+    report.gaps = gaps;
+    report.severity = report.flags.filter(f => f === 'R' || f === 'D').length + gaps.reduce((a, g) => a + (g[1] - g[0]) / 10, 0);
+    return { words, report };
+  }
+  function normalize(v) { let n = 0; for (const x of v) n += x * x; n = Math.sqrt(n) || 1; const o = new Float32Array(v.length); for (let i = 0; i < v.length; i++) o[i] = v[i] / n; return o; }
+  function dotAt(A, i, B, j, dim) { let s = 0; const a = i * dim, b = j * dim; for (let k = 0; k < dim; k++) s += A[a + k] * B[b + k]; return s; }
+  class Online {
+    constructor(dim, thr, cap = 80) { this.dim = dim; this.thr = thr; this.cap = cap; this.sum = []; this.cn = []; }
+    assign(e) {
+      let best = -1, bv = -2;
+      for (let k = 0; k < this.cn.length; k++) { const c = this.cn[k]; let s = 0; for (let i = 0; i < this.dim; i++) s += e[i] * c[i]; if (s > bv) { bv = s; best = k; } }
+      if (best < 0 || (bv < this.thr && this.cn.length < this.cap)) { this.sum.push(Float32Array.from(e)); this.cn.push(Float32Array.from(e)); return this.cn.length - 1; }
+      const S = this.sum[best]; for (let i = 0; i < this.dim; i++) S[i] += e[i]; this.cn[best] = normalize(S); return best;
+    }
+  }
+  function centroids(E, n, dim, lab, K) {
+    const C = new Float32Array(K * dim), cnt = new Int32Array(K);
+    for (let i = 0; i < n; i++) { const k = lab[i]; if (k < 0) continue; cnt[k]++; for (let d = 0; d < dim; d++) C[k * dim + d] += E[i * dim + d]; }
+    for (let k = 0; k < K; k++) { let s = 0; for (let d = 0; d < dim; d++) s += C[k * dim + d] ** 2; s = Math.sqrt(s) || 1; for (let d = 0; d < dim; d++) C[k * dim + d] /= s; }
+    return { C, cnt };
+  }
+  function relabel(lab, n) { const map = new Map(); for (let i = 0; i < n; i++) { if (lab[i] < 0) continue; if (!map.has(lab[i])) map.set(lab[i], map.size); lab[i] = map.get(lab[i]); } return map.size; }
+  function reassign(E, n, dim, lab, C, K, allowed) { for (let i = 0; i < n; i++) { let best = -1, bv = -2; for (let k = 0; k < K; k++) { if (allowed && !allowed[k]) continue; const s = dotAt(E, i, C, k, dim); if (s > bv) { bv = s; best = k; } } lab[i] = best; } }
+  function cluster(E, n, dim, thr) {
+    const lab = new Int32Array(n);
+    if (!n) return { labels: lab, K: 0 };
+    const on = new Online(dim, Math.max(0.3, thr - 0.05), 80);
+    for (let i = 0; i < n; i++) lab[i] = on.assign(E.subarray(i * dim, (i + 1) * dim));
+    let K = relabel(lab, n);
+    for (let it = 0; it < 3; it++) { const { C } = centroids(E, n, dim, lab, K); reassign(E, n, dim, lab, C, K); K = relabel(lab, n); }
+    for (;;) {
+      const { C, cnt } = centroids(E, n, dim, lab, K); let bi = -1, bj = -1, bv = -2;
+      for (let a = 0; a < K; a++) for (let b = a + 1; b < K; b++) { const s = dotAt(C, a, C, b, dim); if (s > bv) { bv = s; bi = a; bj = b; } }
+      if (bi < 0 || bv < thr) break;
+      const keep = cnt[bi] >= cnt[bj] ? bi : bj, gone = keep === bi ? bj : bi;
+      for (let i = 0; i < n; i++) if (lab[i] === gone) lab[i] = keep;
+      K = relabel(lab, n);
+    }
+    for (let r = 0; r < 2; r++) {
+      const { C, cnt } = centroids(E, n, dim, lab, K), big = new Uint8Array(K); let nb = 0;
+      for (let k = 0; k < K; k++) if (cnt[k] >= Math.max(8, n * 0.01)) { big[k] = 1; nb++; }
+      reassign(E, n, dim, lab, C, K, nb && nb < K ? big : null); K = relabel(lab, n);
+    }
+    for (let i = 1; i + 1 < n; i++) if (lab[i - 1] === lab[i + 1] && lab[i] !== lab[i - 1]) lab[i] = lab[i - 1];
+    K = relabel(lab, n);
+    return { labels: lab, K };
+  }
+  /* 依 Whisper 語言（每視窗）＋文字書寫系統判斷 */
+  function scriptLang(text) {
+    const t = text.replace(/[\s\d\p{P}\p{S}]/gu, ''); if (!t) return null;
+    let han = 0, kana = 0, hang = 0, lat = 0;
+    for (const ch of t) { if (/[\u3040-\u30ff]/.test(ch)) kana++; else if (/[\u3400-\u9fff\uf900-\ufaff]/.test(ch)) han++; else if (/[\uac00-\ud7af]/.test(ch)) hang++; else if (/[A-Za-z\u00c0-\u024f]/.test(ch)) lat++; }
+    const L = [...t].length;
+    if (kana >= 2 && kana / L > 0.1) return 'ja'; if (hang / L > 0.3) return 'ko'; if (han / L >= 0.3 || han >= 4) return 'zh'; if (lat / L > 0.5) return 'latin';
+    return null;
+  }
+  const LANG = { en: ['英語', 'eng_Latn'], ja: ['日語', 'jpn_Jpan'], ko: ['韓語', 'kor_Hang'], vi: ['越南語', 'vie_Latn'], th: ['泰語', 'tha_Thai'], id: ['印尼語', 'ind_Latn'], ms: ['馬來語', 'zsm_Latn'], fr: ['法語', 'fra_Latn'], de: ['德語', 'deu_Latn'], es: ['西班牙語', 'spa_Latn'], ru: ['俄語', 'rus_Cyrl'] };
+  function buildUtterances(items, spkAt) {
+    const out = []; let cur = null, lastSpk = -1;
+    const close = () => { if (cur && cur.text.trim()) { cur.text = cur.text.trim(); out.push(cur); } cur = null; };
+    for (const it of items) {
+      if (it.gap) { close(); out.push({ kind: it.fail ? 'fail' : 'gap', s: it.gap[0], e: it.gap[1], spk: -1, text: '' }); continue; }
+      const r = spkAt((it.s + it.e) / 2); let k = r.k; if (k < 0) k = lastSpk >= 0 ? lastSpk : 0;
+      const prev = cur ? cur.text.trim() : '';
+      const endP = /[。！？!?]$/.test(prev) || /[a-z]\.$/i.test(prev);
+      const lang = it.lang || 'zh';
+      if (!cur || k !== cur.spk || it.s - cur.e > 1.0 || endP || lang !== cur.wlang || (prev.length > 160 && /[，,、；;]$/.test(prev)) || prev.length > 260) {
+        close(); cur = { kind: 'speech', s: it.s, e: it.e, spk: k, text: '', wlang: lang, flags: new Set(), unsure: 0, n: 0 };
+      }
+      cur.text += cur.text === '' ? it.t.replace(/^\s+/, '') : it.t; cur.e = Math.max(cur.e, it.e); cur.n++;
+      if (!r.sure) cur.unsure++;
+      if (it.f) for (const c of it.f) cur.flags.add(c);
+      lastSpk = k;
+    }
+    close();
+    for (const u of out) if (u.kind === 'speech' && u.n >= 2 && u.unsure / u.n > 0.5) u.flags.add('K');
+    return out;
+  }
+  const FLAG_TEXT = { R: '重複字串（疑似幻覺）', S: '該時段無語音能量（疑似幻覺）', D: '字數密度異常（疑似幻覺）', K: '講者判定不確定' };
+  const RX_DECISION = /(決議|決定|定案|通過|同意|確定|結論|核定|照辦|就這樣辦|就這麼辦|拍板)/;
+  const RX_TASK = /(請.{0,15}(負責|處理|協助|提供|準備|完成|確認|追蹤|研議|評估|補充|彙整|提送|提出|說明|修正|聯繫|聯絡|安排|檢討|規劃)|負責|下次會議|期限|截止|之前(完成|提供|提送|送)|列管|追蹤|待辦|交辦|回覆)/;
+  return { frameDb, speechMask, maskIntervals, speechSeconds, speechFrac, toWords, checkWindow, normalize, Online, cluster, scriptLang, LANG, buildUtterances, FLAG_TEXT, RX_DECISION, RX_TASK, fmt };
+})();
+
+/* ===== DOCX：自帶 ZIP 讀寫（不依賴外部函式庫），依空白範本欄位或 {標籤} 填入 ===== */
+const DOCX = (() => {
+  const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main', XMLNS = 'http://www.w3.org/XML/1998/namespace';
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  async function inflate(bytes) { const out = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return new Uint8Array(await new Response(out).arrayBuffer()); }
+  function readZip(buf) {
+    const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength); let eocd = -1;
+    for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('不是有效的 .docx 檔');
+    const count = dv.getUint16(eocd + 10, true); let p = dv.getUint32(eocd + 16, true); const entries = [];
+    for (let n = 0; n < count; n++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('docx 結構損毀');
+      const method = dv.getUint16(p + 10, true), crc = dv.getUint32(p + 16, true), csize = dv.getUint32(p + 20, true), usize = dv.getUint32(p + 24, true);
+      const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), lho = dv.getUint32(p + 42, true);
+      const name = dec.decode(buf.subarray(p + 46, p + 46 + nlen)), ds = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+      entries.push({ name, method, crc, csize, usize, comp: buf.subarray(ds, ds + csize) }); p += 46 + nlen + xlen + clen;
+    }
+    return entries;
+  }
+  async function entryData(e) { if (e.method === 0) return e.comp; if (e.method === 8) return inflate(e.comp); throw new Error('不支援的壓縮方式'); }
+  function writeZip(entries) {
+    const parts = [], central = []; let off = 0;
+    for (const e0 of entries) {
+      const name = enc.encode(e0.name), e = e0.data ? { method: 0, crc: crc32(e0.data), csize: e0.data.length, usize: e0.data.length, comp: e0.data } : e0;
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, e.method, true); lh.setUint16(12, 0x21, true);
+      lh.setUint32(14, e.crc, true); lh.setUint32(18, e.csize, true); lh.setUint32(22, e.usize, true); lh.setUint16(26, name.length, true);
+      parts.push(new Uint8Array(lh.buffer), name, e.comp);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, e.method, true); ch.setUint16(14, 0x21, true);
+      ch.setUint32(16, e.crc, true); ch.setUint32(20, e.csize, true); ch.setUint32(24, e.usize, true); ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+      central.push(new Uint8Array(ch.buffer), name); off += 30 + name.length + e.csize;
+    }
+    const cd = central.reduce((a, b) => a + b.length, 0), eo = new DataView(new ArrayBuffer(22));
+    eo.setUint32(0, 0x06054b50, true); eo.setUint16(8, entries.length, true); eo.setUint16(10, entries.length, true); eo.setUint32(12, cd, true); eo.setUint32(16, off, true);
+    return new Blob([...parts, ...central, new Uint8Array(eo.buffer)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  }
+  const FIELDS = [
+    { key: 'title', block: false, rx: /^(會議)?(名稱|主題|主旨|事由)$|^會議$/ },
+    { key: 'date', block: false, rx: /^(會議|開會)?日期$/ },
+    { key: 'time', block: false, rx: /^(會議|開會)?時間$/ },
+    { key: 'place', block: false, rx: /^(會議|開會)?地點$/ },
+    { key: 'chair', block: false, rx: /^(會議)?(主席|主持人)$/ },
+    { key: 'recorder', block: false, rx: /^(記錄|紀錄)(人|者|人員)?$/ },
+    { key: 'attendees', block: false, rx: /^(出列?席|列席|與會|參加|參與)(單位)?(及|與)?(人員|者|名單|單位)?$/ },
+    { key: 'content', block: true, rx: /^(會議|討論|發言)?(內容|討論|過程|紀要|記要|摘要)$|^逐字稿$|^(會議)?(紀錄|記錄)內容$|^討論事項$/ },
+    { key: 'decisions', block: true, rx: /^(會議)?(決議|結論)(事項)?$|^決議及結論$|^結論與決議$/ },
+    { key: 'todos', block: true, rx: /^(待辦|追蹤|後續辦理|辦理|執行|交辦|列管)(事項)?$|^工作分配$/ },
+    { key: 'adjourn', block: false, rx: /^散會(時間)?$/ }
+  ];
+  const LABEL = { title: '會議名稱', date: '日期', time: '時間', place: '地點', chair: '主席', recorder: '紀錄', attendees: '出席人員', content: '會議內容', decisions: '決議事項', todos: '待辦事項', adjourn: '散會' };
+  const ALIAS = { title: 'title', 會議名稱: 'title', 會議主題: 'title', 主題: 'title', 名稱: 'title', date: 'date', 日期: 'date', time: 'time', 時間: 'time', place: 'place', 地點: 'place', chair: 'chair', 主席: 'chair', recorder: 'recorder', 紀錄: 'recorder', 記錄: 'recorder', attendees: 'attendees', 出席人員: 'attendees', 與會人員: 'attendees', 出席: 'attendees', content: 'content', transcript: 'content', 逐字稿: 'content', 會議內容: 'content', decisions: 'decisions', 決議: 'decisions', 決議事項: 'decisions', todos: 'todos', 待辦: 'todos', 待辦事項: 'todos', adjourn: 'adjourn', 散會: 'adjourn' };
+  const norm = s => s.replace(/[\s\u3000]/g, '').replace(/^[（(]?[一二三四五六七八九十]+[)）]?[、.．]?/, '').replace(/^[（(]?\d+[)）.．、]?/, '').replace(/[（）()]/g, '').replace(/[:：︰]$/, '');
+  const matchField = l => { const n = norm(l); return n && n.length <= 14 ? FIELDS.find(f => f.rx.test(n)) || null : null; };
+  const kids = (el, name) => { const r = []; for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 1 && c.localName === name) r.push(c); return r; };
+  const all = (root, name) => Array.from(root.getElementsByTagNameNS(W, name));
+  function segsOf(p) {
+    const segs = []; let text = '';
+    for (const r of kids(p, 'r').concat(kids(p, 'hyperlink').flatMap(h => kids(h, 'r'))))
+      for (let c = r.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType !== 1) continue;
+        const t = c.localName === 't' ? c.textContent : c.localName === 'tab' ? '\t' : (c.localName === 'br' || c.localName === 'cr') ? '\n' : null;
+        if (t == null) continue; segs.push({ r, node: c, a: text.length, b: text.length + t.length }); text += t;
+      }
+    return { text, segs };
+  }
+  const pText = p => segsOf(p).text;
+  const rPrOf = r => { const x = r && kids(r, 'rPr')[0]; return x ? x.cloneNode(true) : null; };
+  function makeRun(doc, text, rPr) {
+    const r = doc.createElementNS(W, 'w:r');
+    if (rPr) { const c = rPr.cloneNode(true); for (const b of kids(c, 'b').concat(kids(c, 'bCs'), kids(c, 'u'))) c.removeChild(b); r.appendChild(c); }
+    String(text).split('\n').forEach((ln, i) => {
+      if (i) r.appendChild(doc.createElementNS(W, 'w:br'));
+      ln.split('\t').forEach((pt, j) => { if (j) r.appendChild(doc.createElementNS(W, 'w:tab')); if (pt) { const t = doc.createElementNS(W, 'w:t'); t.setAttributeNS(XMLNS, 'xml:space', 'preserve'); t.textContent = pt; r.appendChild(t); } });
+    });
+    return r;
+  }
+  function insertAt(doc, p, idx, value) {
+    const { segs } = segsOf(p);
+    const seg = segs.find(s => s.a < idx && idx < s.b) || segs.filter(s => s.b === idx).pop();
+    if (!seg) { p.appendChild(makeRun(doc, value, null)); return; }
+    const r = seg.r, rPr = rPrOf(r), nr = makeRun(doc, value, rPr);
+    const tail = doc.createElementNS(W, 'w:r'); if (rPr) tail.appendChild(rPr.cloneNode(true));
+    if (idx < seg.b) {
+      const full = seg.node.textContent, k = idx - seg.a;
+      seg.node.textContent = full.slice(0, k); seg.node.setAttributeNS(XMLNS, 'xml:space', 'preserve');
+      const t2 = doc.createElementNS(W, 'w:t'); t2.setAttributeNS(XMLNS, 'xml:space', 'preserve'); t2.textContent = full.slice(k); tail.appendChild(t2);
+    }
+    let c = seg.node.nextSibling; while (c) { const nx = c.nextSibling; tail.appendChild(c); c = nx; }
+    r.parentNode.insertBefore(nr, r.nextSibling);
+    if (kids(tail, 't').length || kids(tail, 'tab').length || kids(tail, 'br').length) nr.parentNode.insertBefore(tail, nr.nextSibling);
+  }
+  function newPara(doc, ref, text, indent) {
+    const p = doc.createElementNS(W, 'w:p'), ppr = ref && kids(ref, 'pPr')[0];
+    if (ppr) { const c = ppr.cloneNode(true); for (const x of kids(c, 'numPr').concat(kids(c, 'rPr'))) c.removeChild(x); p.appendChild(c); }
+    if (indent) { let pp = kids(p, 'pPr')[0]; if (!pp) { pp = doc.createElementNS(W, 'w:pPr'); p.appendChild(pp); } for (const x of kids(pp, 'ind')) pp.removeChild(x); const ind = doc.createElementNS(W, 'w:ind'); ind.setAttributeNS(W, 'w:left', String(indent)); pp.appendChild(ind); }
+    p.appendChild(makeRun(doc, text, rPrOf(ref && kids(ref, 'r')[0])));
+    return p;
+  }
+  function fill(doc, v) {
+    const body = all(doc, 'body')[0], origP = all(doc, 'p'), done = new Set();
+    const has = k => v[k] != null && (Array.isArray(v[k]) ? v[k].length : String(v[k]).trim() !== '');
+    const lines = k => Array.isArray(v[k]) ? v[k] : String(v[k] || '').split('\n');
+    const text = k => lines(k).join('\n');
+    // 1) {標籤} 或 {{標籤}}
+    const rxTag = /\{\{?\s*([^{}\n]{1,30}?)\s*\}?\}/g;
+    for (const p of origP) {
+      const t = pText(p); if (!/\{[^{}\n]{1,30}\}/.test(t)) continue;
+      const keys = []; t.replace(rxTag, (m, nm) => { const k = ALIAS[nm.trim()]; if (k) keys.push(k); return m; });
+      if (!keys.length) continue;
+      keys.forEach(k => done.add(k));
+      const only = t.trim().replace(rxTag, '').trim() === '' && keys.length === 1 && FIELDS.find(f => f.key === keys[0] && f.block);
+      if (only) { let ref = p; for (const l of has(keys[0]) ? lines(keys[0]) : ['']) { const np = newPara(doc, p, l); ref.parentNode.insertBefore(np, ref.nextSibling); ref = np; } p.parentNode.removeChild(p); continue; }
+      const nt = t.replace(rxTag, (m, nm) => { const k = ALIAS[nm.trim()]; return k ? (has(k) ? text(k) : '') : m; });
+      const { segs } = segsOf(p), rPr = segs[0] ? rPrOf(segs[0].r) : null;
+      for (const r of kids(p, 'r').concat(kids(p, 'hyperlink'))) p.removeChild(r);
+      const r = makeRun(doc, nt, null); if (rPr) r.insertBefore(rPr, r.firstChild); p.appendChild(r);
+    }
+    // 2) 表格：左欄標籤、右欄空白
+    for (const tr of all(doc, 'tr')) {
+      const cells = kids(tr, 'tc');
+      cells.forEach((tc, i) => {
+        const f = matchField(kids(tc, 'p').map(pText).join('').trim());
+        if (!f || done.has(f.key) || !cells[i + 1] || kids(cells[i + 1], 'p').map(pText).join('').trim()) return;
+        done.add(f.key); if (!has(f.key)) return;
+        const t = cells[i + 1], ps = kids(t, 'p'), ref = ps[0]; ps.forEach(p => t.removeChild(p));
+        lines(f.key).forEach(l => t.appendChild(newPara(doc, ref, l)));
+      });
+    }
+    // 3) 段落「標籤：」
+    for (const p of origP) {
+      if (!p.parentNode) continue;
+      const t = pText(p); if (!t.trim()) continue;
+      const hits = []; const rx = /([^\t\n:：︰]{1,18})[:：︰]/g; let m;
+      while ((m = rx.exec(t))) { const f = matchField(m[1]); if (!f) continue; const end = m.index + m[0].length, val = t.slice(end).split(/[\t\n]/)[0]; if (val.trim() && !/^[_＿\s　]+$/.test(val)) continue; hits.push({ f, at: end }); }
+      for (const h of hits.reverse()) {
+        if (done.has(h.f.key)) continue; done.add(h.f.key); if (!has(h.f.key)) continue;
+        if (h.f.block && hits.length === 1) { let ref = p; for (const l of lines(h.f.key)) { const np = newPara(doc, p, l, 480); ref.parentNode.insertBefore(np, ref.nextSibling); ref = np; } }
+        else insertAt(doc, p, h.at, text(h.f.key).replace(/\n/g, '、'));
+      }
+    }
+    // 4) 標題段落（無冒號）
+    for (const p of origP) {
+      if (!p.parentNode || p.parentNode.localName === 'tc') continue;
+      const f = matchField(pText(p).trim()); if (!f || !f.block || done.has(f.key)) continue;
+      let nx = p.nextSibling; while (nx && nx.nodeType !== 1) nx = nx.nextSibling;
+      const nt = nx && nx.localName === 'p' ? pText(nx).trim() : '';
+      if (nt && !matchField(nt) && !matchField((nt.match(/^[^:：︰]{1,18}/) || [''])[0])) continue;
+      done.add(f.key); if (!has(f.key)) continue;
+      let ref = p; for (const l of lines(f.key)) { const np = newPara(doc, p, l); ref.parentNode.insertBefore(np, ref.nextSibling); ref = np; }
+    }
+    // 5) 範本沒有的重要欄位附在文末
+    const miss = FIELDS.filter(f => !done.has(f.key) && has(f.key) && (f.block || f.key === 'attendees' || f.key === 'title'));
+    if (miss.length) {
+      const sect = kids(body, 'sectPr')[0] || null;
+      const add = (t, b) => { const p = doc.createElementNS(W, 'w:p'), r = makeRun(doc, t, null); if (b) { const rp = doc.createElementNS(W, 'w:rPr'); rp.appendChild(doc.createElementNS(W, 'w:b')); r.insertBefore(rp, r.firstChild); } p.appendChild(r); body.insertBefore(p, sect); };
+      add('（以下為範本中未找到對應欄位之內容）', true);
+      for (const f of miss) { if (f.block) { add(LABEL[f.key] + '：', true); lines(f.key).forEach(l => add(l)); } else add(LABEL[f.key] + '：' + text(f.key)); }
+    }
+  }
+  function defaultEntries() {
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const P = (t, o = {}) => `<w:p><w:pPr>${o.c ? '<w:jc w:val="center"/>' : ''}<w:spacing w:after="${o.after ?? 80}"/></w:pPr>` + t.split('\t').map((x, i) => (i ? '<w:r><w:tab/></w:r>' : '') + (x ? `<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="標楷體"/>${o.b ? '<w:b/>' : ''}<w:sz w:val="${o.sz || 26}"/></w:rPr><w:t xml:space="preserve">${esc(x)}</w:t></w:r>` : '')).join('') + '</w:p>';
+    const body = [P('會議紀錄', { c: 1, b: 1, sz: 36, after: 240 }), P('會議名稱︰'), P('一、時間︰'), P('二、地點︰'), P('三、主席︰\t\t\t紀錄︰'), P('四、出（列）席人員︰'), P('五、會議內容︰'), P('六、決議事項︰'), P('七、待辦事項︰'), P('八、散會︰')].join('');
+    return [
+      { name: '[Content_Types].xml', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>') },
+      { name: '_rels/.rels', data: enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>') },
+      { name: 'word/document.xml', data: enc.encode(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="${W}"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1304" w:bottom="1440" w:left="1304" w:header="851" w:footer="992" w:gutter="0"/></w:sectPr></w:body></w:document>`) }
+    ];
+  }
+  async function build(bytes, v, DP, XS) {
+    const entries = bytes ? readZip(new Uint8Array(bytes)) : defaultEntries();
+    const de = entries.find(e => e.name === 'word/document.xml'); if (!de) throw new Error('範本內找不到 word/document.xml');
+    const xml = dec.decode(de.data || await entryData(de));
+    const doc = new DP().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) throw new Error('範本 XML 解析失敗');
+    fill(doc, v);
+    let out = new XS().serializeToString(doc);
+    if (!out.startsWith('<?xml')) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + out;
+    return writeZip(entries.map(e => e === de ? { name: e.name, data: enc.encode(out) } : e));
+  }
+  async function fields(bytes, DP) {
+    const entries = readZip(new Uint8Array(bytes)), de = entries.find(e => e.name === 'word/document.xml'); if (!de) throw new Error('範本內找不到 word/document.xml');
+    const doc = new DP().parseFromString(dec.decode(await entryData(de)), 'application/xml'); const found = new Set();
+    for (const p of all(doc, 'p')) {
+      const t = pText(p); t.replace(/\{\{?\s*([^{}\n]{1,30}?)\s*\}?\}/g, (m, nm) => { const k = ALIAS[nm.trim()]; if (k) found.add(LABEL[k]); return m; });
+      const f0 = matchField(t.trim()); if (f0) found.add(LABEL[f0.key]);
+      let m; const rx = /([^\t\n:：︰]{1,18})[:：︰]/g; while ((m = rx.exec(t))) { const f = matchField(m[1]); if (f) found.add(LABEL[f.key]); }
+    }
+    return [...found];
+  }
+  return { build, fields };
+})();
+</script>
+<script>
+/* ===== APP ===== */
+(() => {
+'use strict';
+const VERSION = 'v9';
+const SR = 16000, WIN = 30, MINW = 18;
+const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+const OPENCC_URLS = ['https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js', 'https://unpkg.com/opencc-js@1.0.5/dist/umd/full.js'];
+const FF_BASES = [['https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm', 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'], ['https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm', 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm']];
+const SPK_MODEL = 'Xenova/wavlm-base-plus-sv', MT_MODEL = 'Xenova/nllb-200-distilled-600M';
+const THR = 0.78, EMB_LEN = 2.0, EMB_HOP = 1.0;
+const COLORS = ['#0d9488', '#7c3aed', '#ea580c', '#2563eb', '#db2777', '#65a30d', '#ca8a04', '#0891b2', '#dc2626', '#4f46e5'];
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = LOGIC.fmt;
+const letter = k => { let s = ''; k++; while (k > 0) { const m = (k - 1) % 26; s = String.fromCharCode(65 + m) + s; k = Math.floor((k - 1) / 26); } return s; };
+const dbg = (...a) => console.info('[逐字稿]', ...a);
+
+const S = { file: null, key: '', duration: 0, running: false, stop: false, processed: 0, t0: 0, p0: 0, wins: [], online: null, liveT: [], liveL: [], final: null, utts: [], tr: {}, playURL: null, playable: false, listenBuilt: 0, tplBuf: null, tplName: '', srcKind: '', stats: { recheck: 0, removed: 0 }, spkLang: {} };
+window.__AVTX = { S, VERSION };
+
+/* ---------- 進度 ---------- */
+const CIRC = 2 * Math.PI * 88;
+function ring(pct, eta) { pct = Math.max(0, Math.min(100, pct)); $('ring').style.strokeDashoffset = (CIRC * (1 - pct / 100)).toFixed(1); $('pct').textContent = Math.floor(pct) + '%'; if (eta != null) $('eta').textContent = eta; }
+const stage = (t, sub) => { $('stage').textContent = t; if (sub != null) $('sub').textContent = sub; };
+const human = s => s >= 3600 ? `${Math.floor(s / 3600)} 小時 ${Math.round(s % 3600 / 60)} 分` : s >= 60 ? `${Math.round(s / 60)} 分鐘` : `${Math.max(1, Math.round(s))} 秒`;
+function progress() {
+  const tot = S.duration || 0, done = Math.min(S.processed, tot || S.processed), el = (performance.now() - S.t0) / 1000, pr = S.processed - S.p0;
+  let eta = '計算剩餘時間…'; if (el > 10 && pr > 0 && tot) eta = '剩餘約 ' + human(Math.max(0, tot - S.processed) / (pr / el));
+  ring(tot ? done / tot * 100 : 0, eta);
+  $('sub').textContent = tot ? `已處理 ${fmt(done)} / ${fmt(tot)}` : `已處理 ${fmt(done)}`;
+}
+
+/* ---------- IndexedDB ---------- */
+const DB = {
+  db: null,
+  open() { return this.db ||= new Promise((res, rej) => { const r = indexedDB.open('ai-transcript-v9', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async tx(mode, fn) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('kv', mode); const r = fn(t.objectStore('kv')); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); },
+  get(k) { return this.tx('readonly', s => s.get(k)).catch(() => null); },
+  put(k, v) { return this.tx('readwrite', s => s.put(v, k)).catch(e => dbg('存檔失敗', e)); }
+};
+
+/* ---------- 繁體 ---------- */
+let cc = null, ccTried = false;
+async function loadOpenCC() {
+  if (cc || ccTried) return; ccTried = true;
+  for (const u of OPENCC_URLS) { try { await new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); cc = OpenCC.Converter({ from: 'cn', to: 'tw' }); return; } catch (e) { dbg('OpenCC', u, e); } }
+}
+const toTW = t => cc ? cc(t) : t;
+
+/* ---------- 本機 AI：網路預檢 → 背景執行緒（Worker）→ 失敗時改在主執行緒執行 ---------- */
+const ENGINE_SRC = "function makeEngine(T, send, cfg) {\n  cfg = cfg || {};\n  try { if (cfg.remoteHost) T.env.remoteHost = cfg.remoteHost; } catch (e) { }\n  try { if (cfg.localPath) { T.env.allowLocalModels = true; T.env.localModelPath = cfg.localPath; T.env.allowRemoteModels = !!cfg.allowRemote; } else T.env.allowLocalModels = false; } catch (e) { }\n  try { const w = T.env.backends.onnx.wasm; if (cfg.wasmSwap && typeof w.wasmPaths === 'string') w.wasmPaths = w.wasmPaths.replace(cfg.wasmSwap[0], cfg.wasmSwap[1]); } catch (e) { }\nlet asr = null, asrWord = false, spkP = null, spkM = null, mt = null, lidOK = true;\nconst prog = p => send({ type: 'dl', p });\nconst CANDS = ['zh', 'en', 'ja', 'ko', 'vi', 'th', 'id', 'ms', 'fr', 'de', 'es', 'ru'];\nasync function detectLang(audio) {\n  if (!lidOK) return { lang: 'zh', p: 0, fx: 0 };\n  try {\n    const gc = asr.model.generation_config || asr.model.config || {};\n    const l2i = gc.lang_to_id; if (!l2i) throw new Error('no lang_to_id');\n    const sot = gc.decoder_start_token_id != null ? gc.decoder_start_token_id : 50258;\n    const feats = await asr.processor(audio);\n    const dec = new T.Tensor('int64', BigInt64Array.from([BigInt(sot)]), [1, 1]);\n    const out = await asr.model({ input_features: feats.input_features, decoder_input_ids: dec });\n    const lg = out.logits, V = lg.dims[lg.dims.length - 1], data = lg.data, base = data.length - V;\n    const sc = []; for (const c of CANDS) { const id = l2i['<|' + c + '|>']; if (id != null && id < V) sc.push([c, Number(data[base + id])]); }\n    if (!sc.length) throw new Error('no candidates');\n    const mx = Math.max(...sc.map(x => x[1])); let z = 0; for (const x of sc) { x[2] = Math.exp(x[1] - mx); z += x[2]; }\n    sc.forEach(x => x[2] /= z); sc.sort((a, b) => b[2] - a[2]);\n    const zh = (sc.find(x => x[0] === 'zh') || [0, 0, 0])[2], top = sc[0];\n    // 國台語優先：外語需明顯勝出才採用\n    const fx = sc.filter(x => x[0] !== 'zh').reduce((a, x) => Math.max(a, x[2]), 0);\n    if (top[0] !== 'zh' && top[2] >= 0.6 && top[2] - zh >= 0.35) return { lang: top[0], p: top[2], fx };\n    return { lang: 'zh', p: zh, fx };\n  } catch (e) { lidOK = false; send({ type: 'note', msg: '語言偵測不可用，改以中文辨識：' + (e && e.message || e) }); return { lang: 'zh', p: 0, fx: 0 }; }\n}\nconst opt = (w, lang) => ({ task: 'transcribe', return_timestamps: w ? 'word' : true, language: lang });\nreturn async (m) => {\n  const ok = (o, tr) => send(Object.assign({ type: 'res', id: m.id, ok: true }, o), tr);\n  try {\n    if (m.type === 'loadASR') {\n      const errs = [];\n      for (const a of m.attempts) {\n        try { asr = await T.pipeline('automatic-speech-recognition', a.id, { device: a.device, dtype: a.dtype, progress_callback: prog }); await asr(new Float32Array(16000), opt(a.word, 'zh')); asrWord = a.word; return ok({ used: a }); }\n        catch (e) { errs.push(a.id + ':' + (e && e.message || e)); asr = null; }\n      }\n      throw new Error(errs.join(' | '));\n    }\n    if (m.type === 'asr') {\n      const L = m.lang ? { lang: m.lang, p: 1 } : await detectLang(m.audio);\n      const o = await asr(m.audio, opt(asrWord, L.lang));\n      return ok({ lang: L.lang, lp: L.p, fx: L.fx || 0, text: o.text || '', chunks: (o.chunks || []).map(c => ({ text: c.text, ts: c.timestamp })) });\n    }\n    if (m.type === 'lid') return ok(await detectLang(m.audio));\n    if (m.type === 'loadSPK') {\n      const Cls = T.AutoModelForXVector || T.WavLMForXVector || T.AutoModel;\n      spkP = await T.AutoProcessor.from_pretrained(m.model, { progress_callback: prog });\n      try { spkM = await Cls.from_pretrained(m.model, { device: m.device, dtype: m.device === 'webgpu' ? 'fp32' : 'q8', progress_callback: prog }); await emb(new Float32Array(32000)); }\n      catch (e) { if (m.device === 'wasm') throw e; spkM = await Cls.from_pretrained(m.model, { device: 'wasm', dtype: 'q8', progress_callback: prog }); }\n      return ok({ dim: (await emb(new Float32Array(32000))).length });\n    }\n    if (m.type === 'embed') {\n      const outs = []; for (const [a, b] of m.ranges) outs.push(await emb(m.audio.subarray(a, b)));\n      const dim = outs.length ? outs[0].length : 0, flat = new Float32Array(outs.length * dim); outs.forEach((e, i) => flat.set(e, i * dim));\n      return ok({ dim, flat }, [flat.buffer]);\n    }\n    if (m.type === 'loadMT') { mt = await T.pipeline('translation', m.model, { device: 'wasm', dtype: 'q8', progress_callback: prog }); return ok({}); }\n    if (m.type === 'mt') { const res = []; for (const it of m.items) { const o = await mt(it.text, { src_lang: it.src, tgt_lang: 'zho_Hant' }); res.push(String((Array.isArray(o) ? o[0] : o).translation_text || '')); } return ok({ res }); }\n    throw new Error('unknown ' + m.type);\n  } catch (e) { send({ type: 'res', id: m.id, ok: false, error: String(e && e.message || e) }); }\n};\nasync function emb(a) { const o = await spkM(await spkP(a)); const e = o.embeddings || o.logits; return Float32Array.from(e.data); }\n}\n";
+const LIB_LOCAL = () => new URL('./lib/transformers.min.js', location.href).href;
+const LIBS = [
+  { id: 'local', url: LIB_LOCAL, check: LIB_LOCAL, local: true },
+  { id: 'jsdelivr', url: () => TF_URL, check: () => TF_URL + '/package.json' },
+  { id: 'esm.sh', url: () => 'https://esm.sh/@huggingface/transformers@3.8.1', check: () => 'https://esm.sh/@huggingface/transformers@3.8.1' }
+];
+const MODEL_HOSTS = [
+  { id: 'local', check: () => new URL('./models/onnx-community/whisper-base/config.json', location.href).href, local: true },
+  { id: 'huggingface.co', check: () => 'https://huggingface.co/onnx-community/whisper-base/resolve/main/config.json' },
+  { id: 'hf-mirror.com', check: () => 'https://hf-mirror.com/onnx-community/whisper-base/resolve/main/config.json' }
+];
+async function reach(url, ms = 12000) {
+  try { const c = new AbortController(), t = setTimeout(() => c.abort(), ms); const r = await fetch(url, { mode: 'cors', cache: 'no-store', signal: c.signal }); clearTimeout(t); return r.ok; } catch (e) { return false; }
+}
+async function hasModelCache() { try { if (!('caches' in self)) return false; const c = await caches.open('transformers-cache'); return (await c.keys()).length > 0; } catch (e) { return false; } }
+async function preflight() {
+  const httpPage = /^https?:$/.test(location.protocol);
+  const libOK = {}, hostOK = {};
+  await Promise.all([
+    ...LIBS.map(async L => { libOK[L.id] = (L.local && !httpPage) ? false : await reach(L.check()); }),
+    ...MODEL_HOSTS.map(async M => { hostOK[M.id] = (M.local && !httpPage) ? false : await reach(M.check()); }),
+    (async () => { hostOK.unpkg = await reach('https://unpkg.com/onnxruntime-web/package.json'); })()
+  ]);
+  const libs = LIBS.filter(L => libOK[L.id]);
+  if (!libs.length) libs.push(LIBS[1], LIBS[2]); // 預檢可能被代理伺服器誤判，仍嘗試載入（瀏覽器快取可能可用）
+  const cfg = {};
+  if (hostOK['huggingface.co']) cfg.remoteHost = 'https://huggingface.co/';
+  else if (hostOK['hf-mirror.com']) cfg.remoteHost = 'https://hf-mirror.com/';
+  if (hostOK.local) { cfg.localPath = new URL('./models/', location.href).href; cfg.allowRemote = !!cfg.remoteHost; }
+  if (!libOK.jsdelivr && hostOK.unpkg) cfg.wasmSwap = ['https://cdn.jsdelivr.net/npm/', 'https://unpkg.com/'];
+  const cached = await hasModelCache();
+  const modelsOK = hostOK.local || hostOK['huggingface.co'] || hostOK['hf-mirror.com'] || cached;
+  const blocked = [];
+  if (!libOK.local && !libOK.jsdelivr && !libOK['esm.sh']) blocked.push('cdn.jsdelivr.net、esm.sh（AI 程式）');
+  if (!modelsOK) blocked.push('huggingface.co（AI 模型檔）');
+  if (!libOK.jsdelivr && !hostOK.unpkg && !libOK.local) blocked.push('cdn.jsdelivr.net、unpkg.com（AI 執行元件）');
+  dbg('網路預檢', JSON.stringify({ libOK, hostOK, cfg, cached }));
+  return { libs, cfg, blocked: [...new Set(blocked)], modelsOK };
+}
+function netError(pf, detail) {
+  const where = location.protocol === 'file:' ? '目前是直接開啟電腦裡的 HTML 檔（file://）。' : '';
+  const e = new Error((pf.blocked.length ? `無法連線到：${pf.blocked.join('；')}。` : '') + where +
+    'AI 辨識元件無法載入。請改用以下任一方式：① 用 https 網址（例如 GitHub Pages）開啟此網頁；② 換一個網路（例如手機熱點）再試；③ 請公司 IT 開放上列網站。' + (detail ? `（技術資訊：${detail}）` : ''));
+  e.unreadable = true; e.net = true; return e;
+}
+const W = {
+  w: null, h: null, mode: '', id: 0, pend: new Map(), booting: null, asr: false, spk: false, spkFail: false, mt: false, mtFail: false, dead: false,
+  onMsg(m) {
+    if (m.type === 'dl') dl(m.p); else if (m.type === 'note') dbg(m.msg);
+    else if (m.type === 'res') { const p = this.pend.get(m.id); if (!p) return; this.pend.delete(m.id); m.ok ? p.res(m) : p.rej(new Error(m.error)); }
+  },
+  failAll(e) { for (const p of this.pend.values()) p.rej(e); this.pend.clear(); },
+  bootWorker(lib, cfg) {
+    return new Promise((res, rej) => {
+      let w = null, done = false, to = null;
+      const fin = (ok, e) => { if (done) return; done = true; clearTimeout(to); if (ok) res(w); else { try { w && w.terminate(); } catch (x) { } rej(e); } };
+      const src = `import * as T from '${lib}';\n${ENGINE_SRC}\nconst H = makeEngine(T, (m, tr) => self.postMessage(m, tr || []), ${JSON.stringify(cfg)});\nself.onmessage = e => H(e.data);\nself.postMessage({ type: 'boot' });`;
+      try { w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })), { type: 'module' }); } catch (e) { return fin(false, e); }
+      to = setTimeout(() => fin(false, new Error('背景執行緒啟動逾時')), 90000);
+      w.onmessage = ({ data: m }) => { if (m && m.type === 'boot') { fin(true); w.onmessage = ({ data }) => this.onMsg(data); } };
+      w.onerror = ev => {
+        ev.preventDefault && ev.preventDefault();
+        if (!done) fin(false, new Error('背景執行緒無法載入'));
+        else { this.dead = true; this.w = null; this.asr = this.spk = this.mt = false; this.failAll(new Error('AI 元件意外停止（可能記憶體不足）')); }
+      };
+    });
+  },
+  async bootMain(lib, cfg) {
+    const T = await import(lib);
+    const make = new Function(ENGINE_SRC + '\nreturn makeEngine;')();
+    return make(T, m => this.onMsg(m), cfg);
+  },
+  async start() {
+    if (this.w || this.h) return;
+    if (this.booting) return this.booting;
+    this.booting = (async () => {
+      stage('連線檢查', '確認 AI 元件的下載來源…');
+      const pf = await preflight(); const errs = [];
+      if (!pf.modelsOK) throw netError(pf);
+      for (const L of pf.libs) { try { this.w = await this.bootWorker(L.url(), pf.cfg); this.mode = 'worker:' + L.id; break; } catch (e) { errs.push(L.id + '/worker：' + (e && e.message || e)); } }
+      if (!this.w) for (const L of pf.libs) { try { this.h = await this.bootMain(L.url(), pf.cfg); this.mode = 'main:' + L.id; break; } catch (e) { errs.push(L.id + '/main：' + (e && e.message || e)); } }
+      if (!this.w && !this.h) { dbg('AI 元件載入失敗', errs); throw netError(pf, errs[errs.length - 1]); }
+      window.__AVTX.engine = this.mode; this.dead = false; dbg('AI 執行方式', this.mode, errs);
+    })();
+    try { await this.booting; } finally { this.booting = null; }
+  },
+  call(msg, tr) {
+    if (!this.w && !this.h) return Promise.reject(new Error('AI 元件尚未啟動'));
+    const id = ++this.id;
+    return new Promise((res, rej) => {
+      this.pend.set(id, { res, rej });
+      const m = Object.assign({ id }, msg);
+      if (this.w) this.w.postMessage(m, tr || []);
+      else Promise.resolve().then(() => this.h(m)).catch(e => this.onMsg({ type: 'res', id, ok: false, error: String(e && e.message || e) }));
+    });
+  }
+};
+const dlState = {}; let dlLast = 0;
+function dl(p) {
+  if (!p || !p.file) return;
+  if (p.status === 'progress' && p.total) dlState[p.file] = [p.loaded, p.total];
+  if (p.status === 'done' && dlState[p.file]) dlState[p.file][0] = dlState[p.file][1];
+  const now = performance.now(); if (now - dlLast < 500) return; dlLast = now;
+  let a = 0, b = 0; for (const [x, y] of Object.values(dlState)) { a += x; b += y; }
+  if (b) $('sub').textContent = `下載 AI 模型 ${Math.round(a / b * 100)}%（僅第一次需要）`;
+}
+async function ensureModels() {
+  await W.start();
+  let gpu = null; if (navigator.gpu) { try { const a = await navigator.gpu.requestAdapter(); if (a) gpu = { f16: a.features.has('shader-f16') }; } catch { } }
+  if (!W.asr) {
+    stage('準備語音辨識模型', '');
+    const LARGE = 'onnx-community/whisper-large-v3-turbo', SMALL = 'onnx-community/whisper-small', BASE = 'onnx-community/whisper-base';
+    const gd = id => ({ encoder_model: id.includes('large') && gpu && gpu.f16 ? 'fp16' : 'fp32', decoder_model_merged: 'q4' });
+    const at = [];
+    if (gpu) at.push({ id: LARGE, word: false, device: 'webgpu', dtype: gd(LARGE) }, { id: SMALL + '_timestamped', word: true, device: 'webgpu', dtype: gd(SMALL) }, { id: SMALL, word: false, device: 'webgpu', dtype: gd(SMALL) });
+    at.push({ id: BASE + '_timestamped', word: true, device: 'wasm', dtype: 'q8' }, { id: BASE, word: false, device: 'wasm', dtype: 'q8' });
+    const r = await W.call({ type: 'loadASR', attempts: at }); W.asr = true; dbg('辨識模型', r.used);
+  }
+  if (!W.spk && !W.spkFail) {
+    stage('準備講者辨識模型', '');
+    try { await W.call({ type: 'loadSPK', model: SPK_MODEL, device: gpu ? 'webgpu' : 'wasm' }); W.spk = true; } catch (e) { W.spkFail = true; dbg('聲紋模型失敗（不分講者）', e); }
+  }
+}
+async function ensureMT() {
+  if (W.mt) return true; if (W.mtFail) return false;
+  try { await W.call({ type: 'loadMT', model: MT_MODEL }); W.mt = true; return true; } catch (e) { W.mtFail = true; dbg('翻譯模型失敗', e); return false; }
+}
+
+/* ---------- 來源：原生解析 → FFmpeg.wasm → 播放擷取 ---------- */
+async function blobURL(url, type) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return URL.createObjectURL(new Blob([await r.arrayBuffer()], { type })); }
+class FFSource {
+  constructor(file) { this.file = file; this.logs = []; }
+  async open() {
+    let lastErr = null;
+    for (const [ffb, coreb] of FF_BASES) {
+      try {
+        const mod = await import(ffb + '/index.js');
+        const ff = new mod.FFmpeg();
+        ff.on('log', ({ message }) => { this.logs.push(message); if (this.logs.length > 300) this.logs.shift(); });
+        const wurl = URL.createObjectURL(new Blob([`import '${ffb}/worker.js';`], { type: 'text/javascript' }));
+        await ff.load({ classWorkerURL: wurl, coreURL: await blobURL(coreb + '/ffmpeg-core.js', 'text/javascript'), wasmURL: await blobURL(coreb + '/ffmpeg-core.wasm', 'application/wasm') });
+        this.ff = ff; break;
+      } catch (e) { lastErr = e; dbg('FFmpeg 載入失敗', ffb, e); }
+    }
+    if (!this.ff) throw lastErr || new Error('FFmpeg 無法載入');
+    await this.ff.createDir('/in').catch(() => { });
+    await this.ff.mount('WORKERFS', { files: [this.file] }, '/in');
+    this.path = '/in/' + this.file.name;
+    this.logs = []; await this.ff.exec(['-hide_banner', '-i', this.path]).catch(() => { });
+    const t = this.logs.join('\n');
+    if (!/Audio:/.test(t)) throw new Error('沒有聲音軌');
+    const m = t.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+    this.duration = m ? (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) : 0;
+    return { duration: this.duration };
+  }
+  async *blocks(fromSec) {
+    const CH = 300; let t = fromSec, empty = 0;
+    try {
+      while (!S.stop) {
+        if (this.duration && t >= this.duration - 0.05) break;
+        const code = await this.ff.exec(['-hide_banner', '-nostdin', '-ss', String(t), '-i', this.path, '-t', String(CH), '-map', '0:a:0', '-vn', '-sn', '-dn', '-ac', '1', '-ar', '16000', '-f', 'f32le', '-y', '/o.raw']);
+        let raw = null; try { raw = await this.ff.readFile('/o.raw'); await this.ff.deleteFile('/o.raw'); } catch { }
+        const n = raw ? Math.floor(raw.byteLength / 4) : 0;
+        if (!n) {
+          dbg('FFmpeg 段落失敗', t, code, this.logs.slice(-3));
+          if (this.duration && ++empty < 3 && t + CH < this.duration) { const z = new Float32Array(CH * SR); z.failed = true; yield { startSec: t, pcm16: z }; t += CH; continue; }
+          break;
+        }
+        empty = 0;
+        yield { startSec: t, pcm16: new Float32Array(raw.buffer, raw.byteOffset, n).slice() };
+        t += n / SR; if (n / SR < CH - 1) break;
+      }
+    } finally { try { await this.ff.unmount('/in'); } catch { } try { this.ff.terminate(); } catch { } }
+  }
+}
+async function* mediaBlocks(file, fromSec) {
+  const v = document.createElement('video'); v.preload = 'auto'; v.muted = false; const url = URL.createObjectURL(file); v.src = url;
+  await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('無法解碼此檔案')); });
+  if (fromSec > 0) { v.currentTime = fromSec; await new Promise(r => v.onseeked = r); }
+  const ac = new AudioContext({ sampleRate: SR }); await ac.resume();
+  const src = ac.createMediaElementSource(v), sp = ac.createScriptProcessor(4096, 1, 1); src.connect(sp); sp.connect(ac.destination);
+  const q = []; let wake = null, ended = false, ending = false, held = false, buf = [], len = 0, t0 = null, last = null;
+  const push = () => { if (!len) return; const p = new Float32Array(len); let o = 0; for (const x of buf) { p.set(x, o); o += x.length; } q.push({ startSec: t0, pcm16: p }); buf = []; len = 0; t0 = null; if (q.length > 24 && !v.paused && !ending) { held = true; v.pause(); } wake && wake(); };
+  sp.onaudioprocess = e => {
+    e.outputBuffer.getChannelData(0).fill(0);
+    if (ended || v.seeking || (held && !ending)) return;
+    const d = e.inputBuffer.getChannelData(0);
+    if (t0 === null) t0 = last != null ? last : Math.max(0, v.currentTime - d.length / SR);
+    buf.push(new Float32Array(d)); len += d.length; last = t0 + len / SR; if (len >= SR * 5) push();
+  };
+  v.onended = () => { ending = true; setTimeout(() => { push(); ended = true; wake && wake(); }, 600); };
+  v.onplay = () => { held = false; };
+  await v.play();
+  try {
+    while (!S.stop) {
+      if (q.length) { const it = q.shift(); if (q.length < 6 && held && !ending) v.play().catch(() => { }); yield it; continue; }
+      if (ended) break; if (v.paused && !ending) v.play().catch(() => { });
+      await new Promise(r => { wake = r; setTimeout(r, 1000); }); wake = null;
+    }
+  } finally { v.pause(); try { sp.disconnect(); src.disconnect(); } catch { } ac.close(); v.removeAttribute('src'); v.load(); URL.revokeObjectURL(url); }
+}
+async function openSource(file) {
+  const errs = [];
+  try {
+    const d = await CORE.demuxFor(file);
+    if (d) { const info = await d.open(); await DECODE.probe(d); return { kind: 'native:' + d.name + '/' + d.track.codec, duration: info.duration, blocks: from => DECODE.blocks(d, from, 60, info.duration) }; }
+    errs.push('原生：格式未支援');
+  } catch (e) { errs.push('原生：' + e.message); }
+  stage('準備轉檔元件', '此格式需先在本機轉出聲音（首次下載約 30 MB）');
+  try { const f = new FFSource(file); const info = await f.open(); return { kind: 'ffmpeg', duration: info.duration, blocks: from => f.blocks(from) }; }
+  catch (e) { errs.push('FFmpeg：' + (e && e.message || e)); }
+  const d = await new Promise(res => { const v = document.createElement('video'), u = URL.createObjectURL(file); let done = false; const fin = x => { if (done) return; done = true; URL.revokeObjectURL(u); res(x); }; v.preload = 'metadata'; v.onloadedmetadata = () => fin(isFinite(v.duration) ? v.duration : 0); v.onerror = () => fin(-1); setTimeout(() => fin(-1), 15000); v.src = u; });
+  if (d > 0) return { kind: 'media', duration: d, blocks: from => mediaBlocks(file, from) };
+  dbg('無法開啟', errs);
+  const e = new Error('無法讀取這個檔案的聲音。可能原因：不是影音檔、檔案損毀或受保護、沒有聲音軌；若是 WMV 等需轉檔的格式，請確認電腦可以連上網路後再試一次。'); e.unreadable = true; throw e;
+}
+
+/* ---------- 播放器（原檔不能播放時改用聆聽副本） ---------- */
+function canPlay(file) {
+  return new Promise(res => { const v = document.createElement('video'), u = URL.createObjectURL(file); let done = false; const fin = x => { if (done) return; done = true; v.removeAttribute('src'); v.load(); URL.revokeObjectURL(u); res(x); }; v.preload = 'metadata'; v.onloadedmetadata = () => fin(isFinite(v.duration) && v.duration > 0 && (v.videoWidth > 0 || v.mozHasAudio !== false)); v.onerror = () => fin(false); setTimeout(() => fin(false), 8000); v.src = u; });
+}
+function setPlayer(blob) {
+  const p = $('player');
+  if (S.playURL) { URL.revokeObjectURL(S.playURL); S.playURL = null; }
+  if (!blob) { p.removeAttribute('src'); p.classList.add('hidden'); return; }
+  S.playURL = URL.createObjectURL(blob); p.src = S.playURL; p.classList.remove('hidden');
+  p.onloadedmetadata = () => { p.style.height = p.videoWidth ? '' : '54px'; p.style.background = p.videoWidth ? '' : 'transparent'; };
+}
+function to8k(pcm) { const n = Math.floor(pcm.length / 2), o = new Uint8Array(n); for (let i = 0; i < n; i++) { const v = (pcm[2 * i] + pcm[2 * i + 1]) / 2; o[i] = Math.max(0, Math.min(255, Math.round(v * 127 + 128))); } return o; }
+async function buildListen() {
+  const parts = []; let t = 0, total = 0;
+  for (let i = 0; i < S.wins.length; i++) {
+    const w = S.wins[i]; const a = await DB.get(S.key + '|a|' + i); if (!a) continue;
+    const gap = Math.round((w.s - t) * 8000); if (gap > 0) { const z = new Uint8Array(gap).fill(128); parts.push(z); total += gap; }
+    parts.push(a); total += a.length; t = w.s + a.length / 8000;
+  }
+  const h = new DataView(new ArrayBuffer(44)); const w4 = (o, s) => { for (let i = 0; i < 4; i++) h.setUint8(o + i, s.charCodeAt(i)); };
+  w4(0, 'RIFF'); h.setUint32(4, 36 + total, true); w4(8, 'WAVE'); w4(12, 'fmt '); h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true); h.setUint32(24, 8000, true); h.setUint32(28, 8000, true); h.setUint16(32, 1, true); h.setUint16(34, 8, true); w4(36, 'data'); h.setUint32(40, total, true);
+  S.listenBuilt = S.wins.length;
+  return new Blob([h.buffer, ...parts], { type: 'audio/wav' });
+}
+
+/* ---------- 講者 ---------- */
+function addOnline(w) {
+  if (!w.emb || !w.embT.length) return;
+  const dim = w.emb.length / w.embT.length;
+  if (!S.online) S.online = new LOGIC.Online(dim, THR - 0.03, 40);
+  for (let j = 0; j < w.embT.length; j++) { S.liveT.push(w.embT[j]); S.liveL.push(S.online.assign(w.emb.subarray(j * dim, (j + 1) * dim))); }
+}
+function spkAtFn(T, L) {
+  return t => {
+    if (!T.length) return { k: -1, sure: false };
+    let lo = 0, hi = T.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (T[m] < t) lo = m + 1; else hi = m; }
+    let j = lo; if (j > 0 && Math.abs(T[j - 1] - t) < Math.abs(T[j] - t)) j--;
+    const d = Math.abs(T[j] - t);
+    return d <= EMB_LEN / 2 + 0.6 ? { k: L[j], sure: true } : d <= 4 ? { k: L[j], sure: false } : { k: -1, sure: false };
+  };
+}
+function itemsOf(wins) {
+  const items = [];
+  for (const w of wins) { if (w.err) { items.push({ gap: [w.s, w.e], fail: true, s: w.s }); continue; } items.push(...w.words); for (const g of w.gaps) items.push({ gap: g, s: g[0] }); }
+  return items.sort((a, b) => a.s - b.s);
+}
+function decorate(utts) {
+  for (const u of utts) {
+    if (u.kind !== 'speech') continue;
+    const foreign = u.wlang && u.wlang !== 'zh' && LOGIC.LANG[u.wlang] && LOGIC.scriptLang(u.text) !== 'zh';
+    if (foreign) { u.lang = u.wlang; u.orig = u.text; u.zh = S.tr[u.text] || null; } else { u.lang = 'zh'; u.text = toTW(u.text); }
+  }
+  return utts;
+}
+function splitMT(t) { if (t.length <= 300) return [t]; const ps = t.match(/[^.!?。！？]+[.!?。！？]*\s*/g) || [t], out = []; let c = ''; for (const p of ps) { if ((c + p).length > 300 && c) { out.push(c); c = ''; } c += p; } if (c) out.push(c); return out; }
+async function translate(utts) {
+  const need = utts.filter(u => u.kind === 'speech' && u.lang !== 'zh' && !S.tr[u.text]);
+  if (need.length && await ensureMT())
+    for (const u of need) { if (!S.tr[u.text]) { try { const r = await W.call({ type: 'mt', items: splitMT(u.text).map(t => ({ text: t, src: LOGIC.LANG[u.lang][1] })) }); S.tr[u.text] = toTW(r.res.join('')); } catch (e) { dbg('翻譯失敗', e); } } }
+  for (const u of utts) if (u.kind === 'speech' && u.lang !== 'zh') u.zh = S.tr[u.text] || null;
+}
+async function finalize() {
+  stage('整理講者與段落', '');
+  const ws = S.wins.filter(w => w.emb && w.embT.length);
+  const n = ws.reduce((a, w) => a + w.embT.length, 0), dim = n ? ws[0].emb.length / ws[0].embT.length : 0;
+  const E = new Float32Array(n * dim), T = new Float64Array(n); let o = 0;
+  for (const w of ws) { E.set(w.emb, o * dim); for (let j = 0; j < w.embT.length; j++) T[o + j] = w.embT[j]; o += w.embT.length; }
+  const r = LOGIC.cluster(E, n, dim, THR);
+  S.final = { T, L: r.labels, K: Math.max(1, r.K) };
+  S.utts = decorate(LOGIC.buildUtterances(itemsOf(S.wins), spkAtFn(T, r.labels)));
+  await translate(S.utts);
+  render();
+}
+
+/* ---------- 單一視窗（≤30 秒） ---------- */
+async function asrRun(a, off, lang) {
+  let r;
+  try { r = await W.call({ type: 'asr', audio: a.slice(), offset: off, lang }); }
+  catch (e) { if (!W.dead) throw e; dbg('AI 元件重新啟動', e); await ensureModels(); r = await W.call({ type: 'asr', audio: a.slice(), offset: off, lang }); }
+  const words = LOGIC.toWords(r.chunks.length ? r.chunks : [{ text: r.text, ts: [0, a.length / SR] }], off, a.length / SR);
+  words.forEach(w => w.lang = r.lang); return { words, lang: r.lang, fx: r.fx || 0 };
+}
+async function processWindow(audio, offset) {
+  if (S.stop) return false;
+  const dur = audio.length / SR;
+  const rec = { s: +offset.toFixed(3), e: +(offset + dur).toFixed(3), words: [], gaps: [], embT: [], emb: new Float32Array(0), speech: 0 };
+  if (window.__AVTX_TAP) try { window.__AVTX_TAP(offset, audio); } catch { }
+  if (audio.failed) rec.err = true;
+  else {
+    const mask = LOGIC.speechMask(LOGIC.frameDb(audio), -50);
+    rec.speech = +LOGIC.speechSeconds(mask).toFixed(2);
+    if (rec.speech >= 0.3) {
+      if (W.spk) {
+        const L = EMB_LEN * SR, H = EMB_HOP * SR, ranges = [];
+        for (let a = 0; a + L <= audio.length; a += H) if (LOGIC.speechFrac(mask, a / SR, (a + L) / SR, 0) >= 0.5) ranges.push([a, a + L]);
+        if (!ranges.length && audio.length >= SR && rec.speech >= 1) ranges.push([0, Math.min(audio.length, L)]);
+        if (ranges.length) try {
+          const r = await W.call({ type: 'embed', audio: audio.slice(), ranges });
+          const E = new Float32Array(ranges.length * r.dim);
+          for (let j = 0; j < ranges.length; j++) E.set(LOGIC.normalize(r.flat.subarray(j * r.dim, (j + 1) * r.dim)), j * r.dim);
+          rec.emb = E; rec.embT = ranges.map(([a, b]) => +(offset + (a + b) / 2 / SR).toFixed(2));
+        } catch (e) { dbg('聲紋失敗', e); }
+      }
+      const liveFrom = S.liveL.length; addOnline(rec); rec._on = true;
+      const labs = S.liveL.slice(liveFrom), lt = S.liveT.slice(liveFrom);
+      try {
+        let first = await asrRun(audio, offset), chk = LOGIC.checkWindow(first.words, mask, offset);
+        if (chk.report.severity >= 1 && dur > 8) {
+          const cut = CORE.findCut(audio, SR, dur * 0.35, dur * 0.65);
+          const w2 = (await asrRun(audio.subarray(0, cut), offset)).words.concat((await asrRun(audio.subarray(cut), offset + cut / SR)).words);
+          const c2 = LOGIC.checkWindow(w2, mask, offset); S.stats.recheck++;
+          if (c2.report.severity < chk.report.severity) chk = c2;
+        }
+        // 視窗內語言混雜：逐段確認語言（外語視窗、或非主要講者且尚未確認語言者），語言不同者以該語言重新辨識
+        let words = chk.words;
+        const cuts = []; for (let j = 1; j < labs.length; j++) if (labs[j] !== labs[j - 1]) cuts.push((lt[j] + lt[j - 1]) / 2);
+        const labOf = (x, y) => { const c = {}; let best = -1, bn = 0; for (let j = 0; j < lt.length; j++) if (lt[j] >= x && lt[j] <= y) { c[labs[j]] = (c[labs[j]] || 0) + 1; if (c[labs[j]] > bn) { bn = c[labs[j]]; best = labs[j]; } } return best; };
+        const dom = labOf(-Infinity, Infinity);
+        const known = k => { const h = S.spkLang[k]; return h && h.zh >= 2 && !h.other; };
+        const segs = [];
+        for (const g of LOGIC.maskIntervals(mask, offset, 0.5)) { let a = g[0]; for (const c of cuts) if (c > a + 0.5 && c < g[1] - 0.5) { segs.push([a, c]); a = c; } segs.push([a, g[1]]); }
+        const wide = first.lang !== 'zh' || first.fx >= 0.15;
+        let checks = 0;
+        for (const g of segs) {
+          if (g[1] - g[0] < 1.5 || checks >= 12) continue;
+          const k = labOf(g[0], g[1]);
+          if (!wide && (k === dom || k < 0 || known(k))) continue;
+          checks++;
+          const a0 = Math.max(0, Math.floor((g[0] - 0.2 - offset) * SR)), a1 = Math.min(audio.length, Math.ceil((g[1] + 0.2 - offset) * SR));
+          const L = await W.call({ type: 'lid', audio: audio.slice(a0, a1) });
+          if (k >= 0) { const h = S.spkLang[k] || (S.spkLang[k] = { zh: 0, other: 0 }); if (L.lang === 'zh') h.zh++; else h.other++; }
+          const inSeg = w => (w.s + w.e) / 2 >= g[0] - 0.2 && (w.s + w.e) / 2 <= g[1] + 0.2;
+          const cur = words.filter(inSeg), curLang = cur.length ? cur[0].lang : first.lang;
+          if (L.lang === curLang) continue;
+          S.stats.recheck++;
+          const r = await asrRun(audio.subarray(a0, a1), offset + a0 / SR, L.lang);
+          const add = r.words.filter(inSeg);
+          if (add.length) words = words.filter(w => !inSeg(w)).concat(add).sort((x, y) => x.s - y.s);
+        }
+        if (words !== chk.words) { chk = LOGIC.checkWindow(words, mask, offset); words = chk.words; }
+        // 有語音但沒有文字的空檔：單獨再辨識一次
+        for (const g of chk.report.gaps.slice(0, 4)) {
+          const a0 = Math.max(0, Math.floor((g[0] - 0.5 - offset) * SR)), a1 = Math.min(audio.length, Math.ceil((g[1] + 0.5 - offset) * SR));
+          if (a1 - a0 < SR) continue;
+          S.stats.recheck++;
+          const r = await asrRun(audio.subarray(a0, a1), offset + a0 / SR);
+          const add = r.words.filter(w => (w.s + w.e) / 2 >= g[0] - 0.3 && (w.s + w.e) / 2 <= g[1] + 0.3);
+          if (add.length) words = words.concat(add).sort((x, y) => x.s - y.s);
+        }
+        if (words !== chk.words) chk = LOGIC.checkWindow(words, mask, offset);
+        S.stats.removed += chk.report.removed;
+        rec.words = chk.words.map(w => { const o = { s: +w.s.toFixed(2), e: +w.e.toFixed(2), t: w.t, lang: w.lang }; if (w.f) o.f = w.f; return o; });
+        rec.gaps = chk.report.gaps.map(g => [+g[0].toFixed(2), +g[1].toFixed(2)]);
+      } catch (e) { rec.err = true; dbg('辨識失敗', offset, e); }
+    }
+  }
+  const idx = S.wins.length;
+  S.wins.push(rec); if (!rec._on) addOnline(rec); delete rec._on;
+  S.processed = rec.e; progress();
+  await DB.put(S.key + '|w|' + idx, rec);
+  if (!S.playable) await DB.put(S.key + '|a|' + idx, to8k(audio));
+  await DB.put(S.key + '|meta', { nWin: S.wins.length, tr: S.tr, v: VERSION });
+  const utts = decorate(LOGIC.buildUtterances(itemsOf([rec]), spkAtFn(S.liveT, S.liveL)));
+  await translate(utts);
+  if (!S.utts.length) $('tx').innerHTML = '';
+  S.utts.push(...utts); $('tx').insertAdjacentHTML('beforeend', utts.map(rowHtml).join('')); $('tx').scrollTop = 1e9;
+  return true;
+}
+
+/* ---------- 主流程 ---------- */
+let wakeLock = null;
+async function keepAwake() { try { if ('wakeLock' in navigator && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); } catch { } }
+document.addEventListener('visibilitychange', () => { if (S.running && document.visibilityState === 'visible') keepAwake(); });
+async function selectFile(file) {
+  if (S.running) { if (!confirm('目前正在處理，要改處理新檔案嗎？（目前進度已自動保存）')) return; S.stop = true; while (S.running) await sleep(200); }
+  Object.assign(S, { file, key: `${file.name}|${file.size}|${file.lastModified}`, duration: 0, processed: 0, wins: [], online: null, liveT: [], liveL: [], final: null, utts: [], tr: {}, stop: false, playable: false, listenBuilt: 0, srcKind: '', stats: { recheck: 0, removed: 0 }, spkLang: {} });
+  $('fname').textContent = `${file.name}（${file.size >= 1073741824 ? (file.size / 1073741824).toFixed(2) + ' GB' : (file.size / 1048576).toFixed(1) + ' MB'}）`;
+  if (!$('tplName').textContent) $('tplName').textContent = '';
+  $('tx').innerHTML = '<div class="empty">逐字稿會在這裡逐段出現</div>'; ['bTxt', 'bSrt', 'bDoc'].forEach(i => $(i).disabled = true);
+  setPlayer(null); ring(0, '準備中');
+  run();
+}
+async function run() {
+  S.running = true; keepAwake();
+  try {
+    stage('分析檔案', '');
+    S.playable = await canPlay(S.file);
+    if (S.playable) setPlayer(S.file);
+    const src = await openSource(S.file);
+    S.srcKind = src.kind; S.duration = src.duration || 0; dbg('來源', src.kind, S.duration);
+    const meta = await DB.get(S.key + '|meta'); let fromSec = 0;
+    if (meta && meta.nWin && meta.v === VERSION) {
+      for (let i = 0; i < meta.nWin; i++) { const r = await DB.get(S.key + '|w|' + i); if (!r) break; S.wins.push(r); addOnline(r); }
+      S.tr = meta.tr || {}; fromSec = S.wins.length ? S.wins[S.wins.length - 1].e : 0; S.processed = fromSec;
+    }
+    await loadOpenCC();
+    if (S.wins.length) { S.utts = decorate(LOGIC.buildUtterances(itemsOf(S.wins), spkAtFn(S.liveT, S.liveL))); render(); }
+    await ensureModels();
+    S.t0 = performance.now(); S.p0 = fromSec;
+    stage(src.kind === 'ffmpeg' ? '轉檔並辨識中' : '辨識中', ''); progress();
+    let pend = new Float32Array(0), pStart = fromSec, first = true;
+    const cat = (a, b) => { const c = new Float32Array(a.length + b.length); c.set(a); c.set(b, a.length); return c; };
+    const drain = async final => {
+      while (!S.stop && (pend.length >= WIN * SR || (final && pend.length > SR * 0.3))) {
+        const cut = pend.length > WIN * SR ? CORE.findCut(pend, SR, MINW, WIN - 0.2) : pend.length;
+        const seg = pend.slice(0, cut); if (pend.failed) seg.failed = true;
+        if (!await processWindow(seg, pStart)) return;
+        pStart += cut / SR; const f = pend.failed; pend = pend.slice(cut); if (f) pend.failed = true;
+      }
+      if (final) pend = new Float32Array(0);
+    };
+    for await (const blk of src.blocks(fromSec)) {
+      if (S.stop) break;
+      let pcm = blk.pcm16; const failed = !!pcm.failed; let bs = blk.startSec;
+      if (first && bs < fromSec) { pcm = pcm.subarray(Math.min(pcm.length, Math.round((fromSec - bs) * SR))); bs = fromSec; }
+      first = false;
+      if (pend.length && (Math.abs(bs - (pStart + pend.length / SR)) > 0.5 || failed !== !!pend.failed)) await drain(true);
+      if (!pend.length) pStart = bs;
+      pend = cat(pend, pcm); if (failed) pend.failed = true;
+      await drain(false);
+    }
+    await drain(true);
+    if (S.stop) return;
+    if (!S.duration) S.duration = S.processed;
+    S.processed = Math.max(S.processed, S.duration);
+    await finalize();
+    if (!S.playable) setPlayer(await buildListen());
+    const sp = S.utts.filter(u => u.kind === 'speech'), gaps = S.utts.filter(u => u.kind !== 'speech');
+    ring(100, '完成');
+    stage('完成', `共 ${sp.length} 句、${S.final.K} 位講者${gaps.length ? `；${gaps.length} 段需人工確認（紅底）` : ''}`);
+    ['bTxt', 'bSrt', 'bDoc'].forEach(i => $(i).disabled = false);
+    window.__AVTX.done = true;
+  } catch (e) {
+    dbg('中斷', e); window.__AVTX.error = String(e && e.message || e);
+    if (e && e.unreadable) { stage(e.net ? '無法載入 AI 辨識元件' : '無法處理此檔案', e.message); ring(0, '—'); }
+    else stage('處理中斷', '處理過程發生問題（' + (e && e.message ? e.message : '未知錯誤') + '）。已完成的部分已自動保存，重新選擇同一檔案即可從中斷處繼續。');
+    if (S.utts.some(u => u.kind === 'speech')) ['bTxt', 'bSrt', 'bDoc'].forEach(i => $(i).disabled = false);
+  } finally { S.running = false; try { wakeLock && wakeLock.release(); } catch { } }
+}
+
+/* ---------- 呈現 ---------- */
+const spkName = k => k < 0 ? '講者 ?' : '講者 ' + letter(k);
+const flagsOf = u => [...(u.flags || [])].map(f => LOGIC.FLAG_TEXT[f]).filter(Boolean);
+const bodyOf = u => u.lang && u.lang !== 'zh' ? `${u.orig} (${u.zh || '未翻譯'})` : u.text;
+function rowHtml(u) {
+  const ts = `<a class="ts" data-s="${u.s}">[${fmt(u.s)}]</a>`;
+  if (u.kind !== 'speech') return `<div class="u gap">${ts}【${fmt(u.s)}–${fmt(u.e)} ${u.kind === 'fail' ? '此段聲音無法解碼' : '有聲音但未辨識出文字'}，請播放確認】</div>`;
+  const fl = flagsOf(u);
+  const body = u.lang !== 'zh' ? `${esc(u.orig)} <span class="zh">(${u.zh ? esc(u.zh) : '未翻譯'})</span>` : esc(u.text);
+  return `<div class="u${fl.length ? ' warn' : ''}">${ts}<span class="sp" style="color:${COLORS[Math.max(0, u.spk) % COLORS.length]}">${spkName(u.spk)}:</span>${body}${fl.length ? `<span class="tag" title="${esc(fl.join('；'))}">需確認</span>` : ''}</div>`;
+}
+function render() { $('tx').innerHTML = S.utts.map(rowHtml).join('') || '<div class="empty">沒有偵測到語音</div>'; }
+$('tx').addEventListener('click', async e => {
+  const a = e.target.closest('.ts'); if (!a) return; e.preventDefault();
+  if (!S.playable && S.wins.length && S.listenBuilt !== S.wins.length) setPlayer(await buildListen());
+  const p = $('player'); if (!p.src) return;
+  const go = () => { p.currentTime = Math.max(0, +a.dataset.s - 0.2); p.play().catch(() => { }); };
+  if (p.readyState >= 1) go(); else p.addEventListener('loadedmetadata', go, { once: true });
+});
+
+/* ---------- 匯出 ---------- */
+function download(name, data, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000); }
+const base = () => S.file.name.replace(/\.[^.]+$/, '');
+function lineOf(u) {
+  if (u.kind !== 'speech') return `[${fmt(u.s)}] 【${fmt(u.s)}–${fmt(u.e)} ${u.kind === 'fail' ? '聲音無法解碼' : '有聲音但未辨識出文字'}，需人工聽寫】`;
+  const fl = flagsOf(u); return `[${fmt(u.s)}] ${spkName(u.spk)}: ${bodyOf(u)}${fl.length ? `【需確認：${fl.join('；')}】` : ''}`;
+}
+$('bTxt').onclick = () => download(base() + '_逐字稿.txt', '\ufeff' + S.utts.map(lineOf).join('\r\n'), 'text/plain;charset=utf-8');
+$('bSrt').onclick = () => { const t = s => fmt(s) + ',' + String(Math.floor((s % 1) * 1000)).padStart(3, '0'); download(base() + '.srt', S.utts.filter(u => u.kind === 'speech').map((u, i) => `${i + 1}\r\n${t(u.s)} --> ${t(u.e)}\r\n${spkName(u.spk)}: ${bodyOf(u)}\r\n`).join('\r\n'), 'text/plain;charset=utf-8'); };
+$('tpl').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const buf = await f.arrayBuffer(); const fl = await DOCX.fields(buf, DOMParser); S.tplBuf = buf; S.tplName = f.name; $('tplName').textContent = `已載入：${f.name}${fl.length ? '｜欄位：' + fl.join('、') : '｜未辨識到欄位，內容將附在文末'}`; }
+  catch (err) { S.tplBuf = null; $('tplName').textContent = '範本無法讀取：' + err.message; }
+  e.target.value = '';
+};
+$('bDoc').onclick = async () => {
+  try {
+    const sp = S.utts.filter(u => u.kind === 'speech');
+    const pick = rx => sp.filter(u => rx.test(u.zh || u.text) && (u.zh || u.text).length >= 6).map((u, i) => `（${i + 1}）${spkName(u.spk)}：「${u.lang !== 'zh' ? (u.zh || u.orig) : u.text}」（${fmt(u.s)}）`);
+    const note = '※ 依關鍵字自動擷取之發言原句，未經改寫，請確認後定稿。';
+    const dec = pick(LOGIC.RX_DECISION), task = pick(LOGIC.RX_TASK);
+    const v = { title: base(), attendees: [...new Set(sp.map(u => spkName(u.spk)))].join('、'), content: S.utts.map(lineOf),
+      decisions: dec.length ? [note, ...dec] : ['（未擷取到含決議關鍵字之發言，請人工撰寫）'], todos: task.length ? [note, ...task] : ['（未擷取到含待辦關鍵字之發言，請人工撰寫）'] };
+    download(base() + '_會議記錄.docx', await DOCX.build(S.tplBuf ? S.tplBuf.slice(0) : null, v, DOMParser, XMLSerializer));
+  } catch (e) { dbg('Word 失敗', e); alert('產出會議記錄失敗：' + e.message); }
+};
+
+/* ---------- 上傳 ---------- */
+const drop = $('drop');
+drop.onclick = () => $('file').click();
+$('file').onchange = e => { if (e.target.files[0]) selectFile(e.target.files[0]); e.target.value = ''; };
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('on'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('on'); }));
+drop.addEventListener('drop', e => e.dataTransfer.files[0] && selectFile(e.dataTransfer.files[0]));
+window.addEventListener('beforeunload', e => { if (S.running) { e.preventDefault(); e.returnValue = ''; } });
+})();
+</script>
+</body>
+</html>
